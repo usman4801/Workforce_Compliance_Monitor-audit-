@@ -320,6 +320,25 @@ def parse_target_pct(val, default):
         return default, False
 
 
+def parse_roster_target_pct(val, default):
+    """Parse the PL Target from the Roster sheet's 'Target' cell (label in F1,
+    value in G1). Excel stores a percent-formatted cell as a raw fraction
+    (e.g. 7.56% is saved as 0.0756), so values under 1 are scaled up to a
+    percentage. Falls back to `default` if the cell is missing/unparseable."""
+    if val is None:
+        return default, False
+    try:
+        s = str(val).strip().replace('%', '')
+        if s == '' or s.lower() in ['nan', 'none']:
+            return default, False
+        f = float(s)
+        if abs(f) < 1:
+            f *= 100
+        return round(f, 2), True
+    except Exception:
+        return default, False
+
+
 # ==========================================================
 # HEADER
 # ==========================================================
@@ -1279,8 +1298,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     # so older files without the new column still work.
                     upl_target_val, upl_target_found = parse_target_pct(safe_cell(dash, 2, 13), 3.50)
                     pl_target_val, pl_target_found = parse_target_pct(safe_cell(dash, 2, 14), 9.67)
-                    if not upl_target_found or not pl_target_found:
-                        target_fallback_used = True
 
                     # Roster sheet: mirror the SAME filters the Dashboard tab applies,
                     # so the Agency-wise table (built from this "scheduled" frame)
@@ -1290,6 +1307,21 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     #   3) Type == 'Direct' only (Dashboard excludes 'Support' staff)
                     #   4) Normalize agency name casing (e.g. 'QuessCorp' -> 'Quesscorp')
                     rdf = pd.read_excel(fname, sheet_name='Roster', dtype=str, header=None)
+
+                    # PL Target override: if the Roster sheet has a 'Target' cell
+                    # (label in F1 / row idx 0, col idx 5; value in G1 / row idx 0,
+                    # col idx 6), use it as this day's PL Target instead of the
+                    # Dashboard sheet's O3 value / the 9.67% default.
+                    roster_pl_target_val, roster_pl_target_found = parse_roster_target_pct(
+                        safe_cell(rdf, 0, 6), pl_target_val
+                    )
+                    if roster_pl_target_found:
+                        pl_target_val = roster_pl_target_val
+                        pl_target_found = True
+
+                    if not upl_target_found or not pl_target_found:
+                        target_fallback_used = True
+
                     roster = rdf.iloc[6:].copy()
                     roster.columns = [str(c).strip() for c in rdf.iloc[5].tolist()]
 
