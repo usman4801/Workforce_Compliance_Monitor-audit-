@@ -12,15 +12,11 @@ import streamlit as st
 
 import streamlit.components.v1 as components
 
-
-
 # Ensure working directory is the app folder
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
 os.chdir(APP_DIR)
-
-
 
 # ==========================================================
 
@@ -34,13 +30,9 @@ os.chdir(APP_DIR)
 
 import datetime as _dt
 
-
-
 WEEK_ANCHOR_DATE = _dt.date(2026, 8, 2)  # This date = start of Week 32
 
 WEEK_ANCHOR_NUM  = 32
-
-
 
 def get_week(d):
 
@@ -59,9 +51,6 @@ def get_week(d):
     return WEEK_ANCHOR_NUM + delta // 7
 
 
-
-
-
 st.set_page_config(
 
     page_title="Workforce Compliance Monitor",
@@ -71,8 +60,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 
 )
-
-
 
 # ==========================================================
 
@@ -92,8 +79,6 @@ st.markdown(
 
     footer {visibility:hidden;}
 
-
-
     [data-testid="stToolbar"] {display:none !important;}
 
     [data-testid="stStatusWidget"] {display:none !important;}
@@ -110,15 +95,11 @@ st.markdown(
 
     .stActionButton {display:none !important;}
 
-
-
     #manage-app-button {display:none !important;}
 
     div[data-testid="manage-app-button"] {display:none !important;}
 
     [data-testid="stConnectionStatus"] {display:none !important;}
-
-
 
     div[data-testid="stDownloadButton"] button {
 
@@ -128,15 +109,11 @@ st.markdown(
 
     }
 
-
-
     .stApp {
 
         background-color:#f8fafc;
 
     }
-
-
 
     .block-container {
 
@@ -156,8 +133,6 @@ st.markdown(
 
     }
 
-
-
     .direct-header-img {
 
         width:100%;
@@ -174,8 +149,6 @@ st.markdown(
 
     }
 
-
-
     div[data-testid="stSelectbox"] {
 
         border:none !important;
@@ -186,8 +159,6 @@ st.markdown(
 
     }
 
-
-
     div[data-testid="stSelectbox"] label p {
 
         font-weight:800 !important;
@@ -197,8 +168,6 @@ st.markdown(
         font-size:13px !important;
 
     }
-
-
 
     div[data-testid="stDateInput"] {
 
@@ -212,8 +181,6 @@ st.markdown(
 
     }
 
-
-
     div[data-testid="stDateInput"] label p {
 
         font-weight:800 !important;
@@ -223,8 +190,6 @@ st.markdown(
         font-size:13px !important;
 
     }
-
-
 
     .branch-logo {
 
@@ -237,8 +202,6 @@ st.markdown(
         object-fit:contain;
 
     }
-
-
 
     .feature-card {
 
@@ -264,8 +227,6 @@ st.markdown(
 
     }
 
-
-
     .fc-blue {
 
         background:#f0f6ff;
@@ -273,8 +234,6 @@ st.markdown(
         border-color:#d2e3fc;
 
     }
-
-
 
     .fc-orange {
 
@@ -284,8 +243,6 @@ st.markdown(
 
     }
 
-
-
     .fc-green {
 
         background:#f0fdf4;
@@ -294,8 +251,6 @@ st.markdown(
 
     }
 
-
-
     .fc-purple {
 
         background:#faf5ff;
@@ -303,8 +258,6 @@ st.markdown(
         border-color:#f3e8ff;
 
     }
-
-
 
     .fc-title {
 
@@ -320,8 +273,6 @@ st.markdown(
 
     }
 
-
-
     .fc-text {
 
         font-size:10px;
@@ -333,8 +284,6 @@ st.markdown(
         font-weight:500;
 
     }
-
-
 
     .metric-card {
 
@@ -354,8 +303,6 @@ st.markdown(
 
     }
 
-
-
     .metric-card:hover {
 
         transform:translateY(-3px);
@@ -364,15 +311,11 @@ st.markdown(
 
     }
 
-
-
     .card-blue {
 
         background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);
 
     }
-
-
 
     .card-red {
 
@@ -380,15 +323,11 @@ st.markdown(
 
     }
 
-
-
     .card-orange {
 
         background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%);
 
     }
-
-
 
     .card-purple {
 
@@ -396,15 +335,11 @@ st.markdown(
 
     }
 
-
-
     .card-green {
 
         background:linear-gradient(135deg,#10b981 0%,#047857 100%);
 
     }
-
-
 
     .card-title {
 
@@ -422,8 +357,6 @@ st.markdown(
 
     }
 
-
-
     .card-value {
 
         font-size:28px;
@@ -431,8 +364,6 @@ st.markdown(
         font-weight:800;
 
     }
-
-
 
     .upl-section {
 
@@ -448,8 +379,6 @@ st.markdown(
 
     }
 
-
-
     .upl-heading {
 
         font-size:20px;
@@ -461,8 +390,6 @@ st.markdown(
         margin-bottom:12px;
 
     }
-
-
 
     .small-note {
 
@@ -479,9 +406,6 @@ st.markdown(
     unsafe_allow_html=True,
 
 )
-
-
-
 
 
 # ==========================================================
@@ -505,9 +429,6 @@ def get_base64_of_bin_file(bin_file):
         return ""
 
 
-
-
-
 def clean_id(val):
 
     try:
@@ -517,9 +438,6 @@ def clean_id(val):
     except Exception:
 
         return str(val).strip().lower()
-
-
-
 
 
 def normalize_col(c):
@@ -541,26 +459,17 @@ def normalize_col(c):
     )
 
 
-
-
-
 def parse_time(time_val):
 
     if pd.isna(time_val):
 
         return None
 
-
-
     value = str(time_val).strip()
-
-
 
     if value.lower() in ["nan", "none", "", "nat"]:
 
         return None
-
-
 
     for fmt in ["%H:%M:%S", "%H:%M", "%I:%M:%S %p", "%I:%M %p"]:
 
@@ -572,12 +481,7 @@ def parse_time(time_val):
 
             pass
 
-
-
     return None
-
-
-
 
 
 def percentage(numerator, denominator):
@@ -587,9 +491,6 @@ def percentage(numerator, denominator):
         return 0.0
 
     return round((numerator / denominator) * 100, 2)
-
-
-
 
 
 def safe_cell(df, row, col):
@@ -609,9 +510,6 @@ def safe_cell(df, row, col):
     except Exception:
 
         return None
-
-
-
 
 
 def parse_target_pct(val, default):
@@ -639,9 +537,6 @@ def parse_target_pct(val, default):
         return default, False
 
 
-
-
-
 # ==========================================================
 
 # HEADER
@@ -660,8 +555,6 @@ for hp in header_paths:
 
         break
 
-
-
 if header_img_str:
 
     st.markdown(
@@ -679,9 +572,6 @@ else:
     st.warning("⚠️ Please upload 'header_banner.png' to the app folder.")
 
 
-
-
-
 # ==========================================================
 
 # FILTERS
@@ -689,8 +579,6 @@ else:
 # ==========================================================
 
 f_col1, f_col2 = st.columns([4, 8])
-
-
 
 with f_col1:
 
@@ -701,8 +589,6 @@ with f_col1:
         options=["AUH1", "DXB5", "DXB3"],
 
     )
-
-
 
     possible_logos = [
 
@@ -720,8 +606,6 @@ with f_col1:
 
     ]
 
-
-
     logo_path = next(
 
         (p for p in possible_logos if os.path.exists(p)),
@@ -729,8 +613,6 @@ with f_col1:
         None,
 
     )
-
-
 
     if logo_path:
 
@@ -756,8 +638,6 @@ with f_col1:
 
         )
 
-
-
 with f_col2:
 
     selected_dates_range = st.date_input(
@@ -769,9 +649,6 @@ with f_col2:
     )
 
 
-
-
-
 # ==========================================================
 
 # 7-HOUR / EXCLUDE CONFIGURATION
@@ -779,8 +656,6 @@ with f_col2:
 # ==========================================================
 
 st.sidebar.header("⚙️ 7-Hours Configuration")
-
-
 
 seven_hours_default = (
 
@@ -806,8 +681,6 @@ seven_hours_default = (
 
 )
 
-
-
 manual_7_ids = st.sidebar.text_area(
 
     "Paste 7-Hour Employee IDs (Comma separated)",
@@ -815,8 +688,6 @@ manual_7_ids = st.sidebar.text_area(
     value=seven_hours_default,
 
 )
-
-
 
 exclude_ids_input = st.sidebar.text_area(
 
@@ -835,9 +706,6 @@ exclude_ids_input = st.sidebar.text_area(
 )
 
 
-
-
-
 # ==========================================================
 
 # LOAD HC MASTER
@@ -849,8 +717,6 @@ exclude_ids_input = st.sidebar.text_area(
 def load_permanent_roster():
 
     roster = pd.DataFrame()
-
-
 
     possible_files = [
 
@@ -868,8 +734,6 @@ def load_permanent_roster():
 
     ]
 
-
-
     for filename in possible_files:
 
         if os.path.exists(filename):
@@ -884,25 +748,15 @@ def load_permanent_roster():
 
                 continue
 
-
-
     if roster.empty:
 
         return roster
 
-
-
     roster.columns = [str(c).strip() for c in roster.columns]
-
-
 
     norm_map = {normalize_col(c): c for c in roster.columns}
 
-
-
     id_col = None
-
-
 
     for c in roster.columns:
 
@@ -924,28 +778,16 @@ def load_permanent_roster():
 
             break
 
-
-
     if id_col is None:
 
         id_col = roster.columns[0]
 
-
-
     roster["_Clean_ID"] = roster[id_col].apply(clean_id)
-
-
 
     return roster
 
 
-
-
-
 roster_df = load_permanent_roster()
-
-
-
 
 
 # ==========================================================
@@ -958,29 +800,19 @@ def build_roster_hours_map(roster):
 
     result = {}
 
-
-
     if roster.empty:
 
         return result
-
-
 
     for _, row in roster.iterrows():
 
         cid = clean_id(row.get("_Clean_ID", ""))
 
-
-
         if not cid:
 
             continue
 
-
-
         row_text = " ".join(str(v).lower() for v in row.tolist())
-
-
 
         if (
 
@@ -1000,18 +832,10 @@ def build_roster_hours_map(roster):
 
             result[cid] = "9 Hours"
 
-
-
     return result
 
 
-
-
-
 roster_hours_map = build_roster_hours_map(roster_df)
-
-
-
 
 
 # ==========================================================
@@ -1025,8 +849,6 @@ def get_possible_paths(d, warehouse):
     d_str = d.strftime("%Y-%m-%d")
 
     folder = warehouse
-
-
 
     if warehouse == "AUH1":
 
@@ -1050,8 +872,6 @@ def get_possible_paths(d, warehouse):
 
         ]
 
-
-
     if warehouse == "DXB5":
 
         return [
@@ -1073,8 +893,6 @@ def get_possible_paths(d, warehouse):
             f"DXB5 {d_str}.xlsx",
 
         ]
-
-
 
     if warehouse == "DXB3":
 
@@ -1098,8 +916,6 @@ def get_possible_paths(d, warehouse):
 
         ]
 
-
-
     return [
 
         os.path.join(folder, f"{d_str}.xlsx.xlsx"),
@@ -1111,9 +927,6 @@ def get_possible_paths(d, warehouse):
         f"{d_str}.xlsx",
 
     ]
-
-
-
 
 
 # ==========================================================
@@ -1137,9 +950,6 @@ def read_daily_file(path):
         return pd.DataFrame()
 
 
-
-
-
 # ==========================================================
 
 # EXISTING ATTENDANCE PROCESSOR
@@ -1160,8 +970,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
     )
 
-
-
     exclude_list = (
 
         [clean_id(x) for x in exclude_str.split(",")]
@@ -1172,17 +980,11 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
     )
 
-
-
     t_dfs = []
 
     missing_files = []
 
-
-
     start_d, end_d = dates_tuple
-
-
 
     date_list = [
 
@@ -1192,15 +994,11 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
     ]
 
-
-
     for d in date_list:
 
         d_str = d.strftime("%Y-%m-%d")
 
         possible_paths = get_possible_paths(d, warehouse)
-
-
 
         f_path = next(
 
@@ -1210,19 +1008,13 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
         )
 
-
-
         if not f_path:
 
             missing_files.append(d_str)
 
             continue
 
-
-
         tdf = read_daily_file(f_path)
-
-
 
         if tdf.empty:
 
@@ -1230,43 +1022,29 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
             continue
 
-
-
         tdf["Date"] = d_str
 
         t_dfs.append(tdf)
-
-
 
     if not t_dfs:
 
         return pd.DataFrame(), missing_files
 
-
-
     a_df = pd.concat(t_dfs, ignore_index=True)
 
     a_df.columns = [str(c).strip() for c in a_df.columns]
-
-
 
     i_col = a_df.columns[0]
 
     n_col = a_df.columns[1]
 
-
-
     a_df["Clean_ID"] = a_df[i_col].apply(clean_id)
-
-
 
     if exclude_list:
 
         a_df = a_df[~a_df["Clean_ID"].isin(exclude_list)].copy()
 
         a_df.reset_index(drop=True, inplace=True)
-
-
 
     def get_hours(row):
 
@@ -1282,11 +1060,7 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
         return "9 Hours"
 
-
-
     a_df["Working Hours"] = a_df.apply(get_hours, axis=1)
-
-
 
     ignore_kws = [
 
@@ -1296,8 +1070,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
     ]
 
-
-
     p_cols = [
 
         col for col in a_df.columns
@@ -1306,13 +1078,9 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
     ]
 
-
-
     if len(p_cols) == 0 and len(a_df.columns) > 4:
 
         p_cols = [c for c in a_df.columns[4:] if c != "Date"]
-
-
 
     def analyze(row):
 
@@ -1322,31 +1090,21 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
         total_punches = len(punches)
 
-
-
         target = str(row.get("Working Hours", "9 Hours"))
 
         min_mins, max_mins = (405, 435) if "7" in target else (525, 555)
-
-
 
         if total_punches == 0:
 
             return pd.Series([0, target, "00:00", "OK", "Absent", "Clean"])
 
-
-
         if total_punches == 1:
 
             return pd.Series([1, target, "N/A", "Error", "Single Scan Only", "Mispunch"])
 
-
-
         dummy = datetime(2026, 1, 1)
 
         total_secs = 0
-
-
 
         for i in range(0, total_punches - (total_punches % 2), 2):
 
@@ -1360,13 +1118,9 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
             total_secs += (end - start).total_seconds()
 
-
-
         eff_mins = total_secs / 60
 
         hr_str = f"{int(total_secs // 3600):02d}:{int((total_secs % 3600) // 60):02d}"
-
-
 
         if total_punches % 2 == 0:
 
@@ -1382,11 +1136,7 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
                 return pd.Series([total_punches, target, hr_str, "Error", "Over Time", "Defaulter Hours"])
 
-
-
         return pd.Series([total_punches, target, hr_str, "Error", "Incomplete Punches", "Mispunch"])
-
-
 
     analyzed = a_df.apply(analyze, axis=1)
 
@@ -1397,8 +1147,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
         "Status", "Category", "Issue Type",
 
     ]
-
-
 
     p_clean = pd.DataFrame()
 
@@ -1416,8 +1164,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
         )
 
-
-
     basic_info = pd.DataFrame({
 
         "Date": a_df["Date"],
@@ -1428,16 +1174,9 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
     })
 
-
-
     result = pd.concat([basic_info, analyzed, p_clean], axis=1)
 
-
-
     return result, missing_files
-
-
-
 
 
 # ==========================================================
@@ -1465,9 +1204,6 @@ def find_column(df, keywords):
     return None
 
 
-
-
-
 def detect_status_from_row(row):
 
     possible_columns = [
@@ -1477,8 +1213,6 @@ def detect_status_from_row(row):
         "absence type", "reason", "remarks", "attendance", "type",
 
     ]
-
-
 
     for col in row.index:
 
@@ -1508,12 +1242,7 @@ def detect_status_from_row(row):
 
                 return "PL"
 
-
-
     return ""
-
-
-
 
 
 # ==========================================================
@@ -1528,11 +1257,7 @@ def get_roster_master(roster):
 
         return pd.DataFrame()
 
-
-
     result = roster.copy()
-
-
 
     id_col = None
 
@@ -1552,17 +1277,11 @@ def get_roster_master(roster):
 
             break
 
-
-
     if id_col is None:
 
         id_col = result.columns[0]
 
-
-
     result["_Clean_ID"] = result[id_col].apply(clean_id)
-
-
 
     agency_col = find_column(result, ["agency", "vendor", "contractor", "supplier"])
 
@@ -1574,8 +1293,6 @@ def get_roster_master(roster):
 
         result["_Agency"] = ""
 
-
-
     shift_col = find_column(result, ["shift", "schedule", "work shift", "shift code"])
 
     if shift_col:
@@ -1585,8 +1302,6 @@ def get_roster_master(roster):
     else:
 
         result["_Shift"] = ""
-
-
 
     status_col = find_column(result, ["status", "attendance status", "leave type", "leave status", "absence type", "attendance"])
 
@@ -1598,18 +1313,10 @@ def get_roster_master(roster):
 
         result["_Status"] = ""
 
-
-
     return result
 
 
-
-
-
 roster_master = get_roster_master(roster_df)
-
-
-
 
 
 # ==========================================================
@@ -1624,8 +1331,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
     start_d, end_d = dates_tuple
 
-
-
     exclude_list = (
 
         [clean_id(x) for x in exclude_str.split(",") if str(x).strip()]
@@ -1636,8 +1341,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
     )
 
-
-
     date_list = [
 
         start_d + timedelta(days=i)
@@ -1646,15 +1349,11 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
     ]
 
-
-
     daily_summary = []
 
     daily_employee_rows = []
 
     missing_files = []
-
-
 
     master = roster_master.copy()
 
@@ -1664,15 +1363,11 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
             master = master[~master["_Clean_ID"].isin(exclude_list)].copy()
 
-
-
     for d in date_list:
 
         d_str = d.strftime("%Y-%m-%d")
 
         possible_paths = get_possible_paths(d, warehouse)
-
-
 
         file_path = next(
 
@@ -1682,19 +1377,13 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         )
 
-
-
         if not file_path:
 
             missing_files.append(d_str)
 
             continue
 
-
-
         attendance = read_daily_file(file_path)
-
-
 
         if attendance.empty:
 
@@ -1702,27 +1391,17 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
             continue
 
-
-
         attendance.columns = [str(c).strip() for c in attendance.columns]
-
-
 
         id_col = attendance.columns[0]
 
         name_col = attendance.columns[1]
 
-
-
         attendance["_Clean_ID"] = attendance[id_col].apply(clean_id)
-
-
 
         if exclude_list:
 
             attendance = attendance[~attendance["_Clean_ID"].isin(exclude_list)].copy()
-
-
 
         ignore = ["id", "name", "employee", "psoft", "building", "country"]
 
@@ -1736,11 +1415,7 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         ]
 
-
-
         attendance_ids = set(attendance["_Clean_ID"])
-
-
 
         if not master.empty:
 
@@ -1762,8 +1437,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
             })
 
-
-
         att_small = attendance.copy()
 
         keep_cols = ["_Clean_ID", id_col, name_col] + punch_cols
@@ -1772,15 +1445,9 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         att_small = att_small[[c for c in keep_cols if c in att_small.columns]]
 
-
-
         day_df = day_df.merge(att_small, on="_Clean_ID", how="left")
 
-
-
         result_rows = []
-
-
 
         for _, row in day_df.iterrows():
 
@@ -1794,8 +1461,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
             master_status = str(row.get("_Status", "")).strip()
 
-
-
             punches = []
 
             for c in punch_cols:
@@ -1806,11 +1471,7 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
                     punches.append(p)
 
-
-
             punch_count = len(punches)
-
-
 
             explicit_status = detect_status_from_row(row)
 
@@ -1818,11 +1479,7 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
                 explicit_status = master_status.upper()
 
-
-
             status_upper = explicit_status.strip().upper()
-
-
 
             if status_upper in ["PL", "PLANNED LEAVE", "ANNUAL LEAVE", "VACATION"]:
 
@@ -1848,8 +1505,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
                 category = "AB"
 
-
-
             result_rows.append({
 
                 "Date": d_str,
@@ -1870,21 +1525,13 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
             })
 
-
-
         employee_day = pd.DataFrame(result_rows)
-
-
 
         if employee_day.empty:
 
             continue
 
-
-
         daily_employee_rows.append(employee_day)
-
-
 
         total_hc = len(employee_day)
 
@@ -1898,15 +1545,11 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         total_pl = int((employee_day["UPL Category"] == "PL").sum())
 
-
-
         shift_text = employee_day["Shift"].fillna("").astype(str).str.upper()
 
         hc_ns = int(shift_text.str.contains("NS|NIGHT|N", regex=True).sum())
 
         hc_ds = total_hc - hc_ns
-
-
 
         daily_summary.append({
 
@@ -1938,11 +1581,7 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         })
 
-
-
     daily_df = pd.DataFrame(daily_summary)
-
-
 
     employee_df = (
 
@@ -1953,8 +1592,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
         else pd.DataFrame()
 
     )
-
-
 
     if not daily_df.empty:
 
@@ -1969,8 +1606,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
         total_upl = int(daily_df["Total UPLs"].sum())
 
         total_pl = int(daily_df["Total PLs"].sum())
-
-
 
         total_row = {
 
@@ -2002,8 +1637,6 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         }
 
-
-
         daily_df = pd.concat(
 
             [daily_df, pd.DataFrame([total_row])],
@@ -2012,12 +1645,7 @@ def process_upl_report(dates_tuple, warehouse, exclude_str):
 
         )
 
-
-
     return daily_df, employee_df, missing_files
-
-
-
 
 
 # ==========================================================
@@ -2032,13 +1660,9 @@ def build_agency_report(employee_df):
 
         return pd.DataFrame()
 
-
-
     data = employee_df.copy()
 
     data["Agency"] = data["Agency"].replace(["", "nan", "None"], "Unknown").fillna("Unknown")
-
-
 
     grouped = (
 
@@ -2064,22 +1688,13 @@ def build_agency_report(employee_df):
 
     )
 
-
-
     grouped["UPL Trend"] = grouped.apply(lambda r: percentage(r["UPL"], r["HC"]), axis=1)
 
     grouped["PL Trend"] = grouped.apply(lambda r: percentage(r["PL"], r["HC"]), axis=1)
 
-
-
     grouped = grouped[["Agency", "HC", "SL", "ABWI", "AB", "UPL", "UPL Trend", "PL", "PL Trend"]]
 
-
-
     return grouped.sort_values("Agency").reset_index(drop=True)
-
-
-
 
 
 # ==========================================================
@@ -2094,25 +1709,17 @@ def build_weekly_summary(daily_df):
 
         return pd.DataFrame()
 
-
-
     actual = daily_df[daily_df["Date"] != "Total"].copy()
-
-
 
     if actual.empty:
 
         return pd.DataFrame()
-
-
 
     total_hc = actual["Total HC"].sum()
 
     total_upl = actual["Total UPLs"].sum()
 
     total_pl = actual["Total PLs"].sum()
-
-
 
     return pd.DataFrame([
 
@@ -2123,9 +1730,6 @@ def build_weekly_summary(daily_df):
     ])
 
 
-
-
-
 # ==========================================================
 
 # MAIN PROCESS
@@ -2133,8 +1737,6 @@ def build_weekly_summary(daily_df):
 # ==========================================================
 
 if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
-
-
 
     final_df, missing_files = process_attendance_data(
 
@@ -2150,19 +1752,13 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
     )
 
-
-
     upl_missing = []
-
-
 
     if not final_df.empty:
 
         mispunches = final_df[final_df["Issue Type"] == "Mispunch"].copy()
 
         defaulters = final_df[final_df["Issue Type"] == "Defaulter Hours"].copy()
-
-
 
         repeated_mispunches = pd.DataFrame()
 
@@ -2183,8 +1779,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         defaulters = pd.DataFrame()
 
         repeated_mispunches = pd.DataFrame()
-
-
 
     # Calculate UPL tile value
 
@@ -2214,19 +1808,13 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
         upl_tile_value = "—"
 
-
-
     if "selected_view" not in st.session_state:
 
         st.session_state.selected_view = "defaulters"
 
-
-
     # TOP CARDS
 
     c1, c2, c3, c4 = st.columns(4)
-
-
 
     with c1:
 
@@ -2252,8 +1840,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             st.session_state.selected_view = "defaulters"
 
-
-
     with c2:
 
         st.markdown(
@@ -2277,8 +1863,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         if st.button("⚠️ View Mispunches ➔", key="btn_mis", use_container_width=True):
 
             st.session_state.selected_view = "mispunches"
-
-
 
     with c3:
 
@@ -2304,8 +1888,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             st.session_state.selected_view = "rep_mispunches"
 
-
-
     with c4:
 
         st.markdown(
@@ -2329,8 +1911,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         if st.button("📋 View UPL Summary ➔", key="btn_upl", use_container_width=True):
 
             st.session_state.selected_view = "upl"
-
-
 
     # CARD CLICK JS
 
@@ -2384,8 +1964,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
     )
 
-
-
     # UPL VIEW
 
     if st.session_state.selected_view == "upl":
@@ -2393,8 +1971,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         st.markdown("<div class='upl-section'>", unsafe_allow_html=True)
 
         st.markdown("<div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
-
-
 
         # Find UPL files for selected date range
 
@@ -2405,8 +1981,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         start_d, end_d = selected_dates_range
 
         upl_date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
-
-
 
         for d in upl_date_list:
 
@@ -2426,8 +2000,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 upl_missing_dates.append(d.strftime("%d-%b-%y"))
 
-
-
         if not upl_files_found:
 
             st.warning("⚠️ No UPL files found for selected dates. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
@@ -2442,8 +2014,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             target_fallback_used = False
 
-
-
             # Same exclusion list used everywhere else in the app, applied here too
 
             upl_exclude_list = (
@@ -2455,8 +2025,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 else []
 
             )
-
-
 
             for d, fname in upl_files_found:
 
@@ -2477,8 +2045,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     upl_total = int(dash.iloc[8, 6])
 
                     pl_total = int(dash.iloc[8, 4])
-
-
 
                     # Weekly target, read from the Dashboard sheet: put "UPL Target"
 
@@ -2502,8 +2068,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                         target_fallback_used = True
 
-
-
                     # Roster sheet: mirror the SAME filters the Dashboard tab applies,
 
                     # so the Agency-wise table (built from this "scheduled" frame)
@@ -2524,35 +2088,23 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     roster.columns = [str(c).strip() for c in rdf.iloc[5].tolist()]
 
-
-
                     roster['_Clean_ID'] = roster['Psoft No'].apply(clean_id)
-
-
 
                     if 'Building' in roster.columns:
 
                         roster = roster[roster['Building'] == selected_warehouse]
 
-
-
                     if upl_exclude_list:
 
                         roster = roster[~roster['_Clean_ID'].isin(upl_exclude_list)]
-
-
 
                     if 'Type' in roster.columns:
 
                         roster = roster[roster['Type'] == 'Direct']
 
-
-
                     if '3P' in roster.columns:
 
                         roster['3P'] = roster['3P'].replace('QuessCorp', 'Quesscorp')
-
-
 
                     scheduled = roster[
 
@@ -2563,8 +2115,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         & (roster['Attendance'].astype(str).str.strip() != '')
 
                     ].copy()
-
-
 
                     abwi_count = len(scheduled[scheduled['Attendance'] == 'ABWI'])
 
@@ -2577,8 +2127,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     upl_from_roster = sl_from_roster + ab_count + abwi_count
 
                     hc_from_roster = len(scheduled)
-
-
 
                     # Sanity check: flag any day where the filtered Roster still
 
@@ -2598,21 +2146,15 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                         )
 
-
-
                     # Collect roster for agency report
 
                     scheduled['_date'] = d.strftime('%d-%b-%y')
 
                     all_roster_scheduled.append(scheduled)
 
-
-
                     upl_trend = round((upl_total / total_hc) * 100, 2) if total_hc > 0 else 0
 
                     pl_trend = round((pl_total / total_hc) * 100, 2) if total_hc > 0 else 0
-
-
 
                     day_wise_data.append({
 
@@ -2652,13 +2194,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     upl_missing_dates.append(d.strftime('%d-%b-%y') + " (error)")
 
-
-
             if day_wise_data:
 
                 day_df = pd.DataFrame(day_wise_data)
-
-
 
                 # Calculate totals
 
@@ -2682,8 +2220,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 t_pl_trend = round((t_pl / t_hc) * 100, 2) if t_hc > 0 else 0
 
-
-
                 # HC-weighted average target across the selected days (handles a
 
                 # date range that spans more than one week with different targets).
@@ -2692,19 +2228,13 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 t_pl_target = round((day_df['_PLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 9.67
 
-
-
                 # Week number from selected dates (ISO week + 1 to match your system)
 
                 week_no = get_week(upl_files_found[0][0])
 
-
-
                 # ===== BOX 1: DAY WISE (full width, colored HTML table) =====
 
                 st.markdown("**Day wise:-**")
-
-
 
                 display_day = day_df[['Date','HC DS','HC NS','Total HC','SL','AB','ABWI','Total UPLs','Target','Trend','Total PLs','Target ','Trend ']].copy()
 
@@ -2740,8 +2270,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 display_day = pd.concat([display_day, total_row_df], ignore_index=True)
 
-
-
                 # Per-row numeric targets, in the same row order as display_day,
 
                 # used below to color Trend cells relative to each row's own target
@@ -2751,8 +2279,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 row_upl_targets = list(day_df['_UPLTargetNum']) + [t_upl_target]
 
                 row_pl_targets = list(day_df['_PLTargetNum']) + [t_pl_target]
-
-
 
                 # Build colored HTML table for Day wise
 
@@ -2842,263 +2368,212 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 st.markdown(day_html, unsafe_allow_html=True)
 
-
-
                 st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
-
-
                 # ===== BOX 2: AGENCY WISE + BAR CHART =====
-
                 if all_roster_scheduled:
-
+                    # Build Agency-wise data from the SAME scheduled roster records
+                    # used for the Day-wise reconciliation.  DS/NS are calculated
+                    # using exactly the same rule as the Day-wise table:
+                    #   NS = Shift contains NS / NIGHT / N
+                    #   DS = Total HC - NS
+                    # Therefore, for every agency:
+                    #   HC DS + HC NS = Total HC
                     combined_roster = pd.concat(all_roster_scheduled, ignore_index=True)
-
+                    combined_roster['3P'] = combined_roster['3P'].fillna('').astype(str).str.strip()
                     combined_roster['3P'] = combined_roster['3P'].replace('QuessCorp', 'Quesscorp')
 
-
+                    # Never count blank agencies as a real agency row.
+                    agency_values = sorted(
+                        [x for x in combined_roster['3P'].dropna().unique() if str(x).strip()]
+                    )
 
                     agency_data = []
-
-                    for agency in sorted(combined_roster['3P'].dropna().unique()):
-
-                        ag = combined_roster[combined_roster['3P'] == agency]
+                    for agency in agency_values:
+                        ag = combined_roster[combined_roster['3P'] == agency].copy()
 
                         ag_hc = len(ag)
+                        shift_text = ag['Shift'].fillna('').astype(str).str.upper()
+                        ag_hc_ns = int(shift_text.str.contains('NS|NIGHT|N', regex=True).sum())
+                        ag_hc_ds = ag_hc - ag_hc_ns
+
+                        # Safety check: this must always reconcile.
+                        if ag_hc_ds + ag_hc_ns != ag_hc:
+                            ag_hc_ds = ag_hc - ag_hc_ns
 
                         ag_sl = len(ag[ag['Attendance'] == 'SL'])
-
                         ag_abwi = len(ag[ag['Attendance'] == 'ABWI'])
-
                         ag_ab = len(ag[ag['Attendance'] == 'AB'])
-
                         ag_upl = ag_sl + ag_abwi + ag_ab
-
                         ag_pl = len(ag[ag['Attendance'] == 'PL'])
 
                         ag_upl_trend = round((ag_upl / ag_hc) * 100, 2) if ag_hc > 0 else 0
-
                         ag_pl_trend = round((ag_pl / ag_hc) * 100, 2) if ag_hc > 0 else 0
 
-
-
                         agency_data.append({
-
                             'Agency': agency,
-
                             'Week No': week_no,
-
+                            'HC DS': ag_hc_ds,
+                            'HC NS': ag_hc_ns,
                             'Total HC': ag_hc,
-
                             'SL': ag_sl,
-
                             'ABWI': ag_abwi,
-
                             'NCNS': ag_ab,
-
                             'Total UPLs': ag_upl,
-
                             'Trend': f'{ag_upl_trend:.2f}%',
-
                             'Total PLs': ag_pl,
-
                             'PL Trend': f'{ag_pl_trend:.2f}%',
-
                         })
-
-
 
                     agency_df_display = pd.DataFrame(agency_data)
 
+                    if not agency_df_display.empty:
+                        ag_t_hc_ds = int(agency_df_display['HC DS'].sum())
+                        ag_t_hc_ns = int(agency_df_display['HC NS'].sum())
+                        ag_t_hc = int(agency_df_display['Total HC'].sum())
+                        ag_t_sl = int(agency_df_display['SL'].sum())
+                        ag_t_abwi = int(agency_df_display['ABWI'].sum())
+                        ag_t_ncns = int(agency_df_display['NCNS'].sum())
+                        ag_t_upl = int(agency_df_display['Total UPLs'].sum())
+                        ag_t_pl = int(agency_df_display['Total PLs'].sum())
+                        ag_t_upl_trend = round((ag_t_upl / ag_t_hc) * 100, 2) if ag_t_hc > 0 else 0
+                        ag_t_pl_trend = round((ag_t_pl / ag_t_hc) * 100, 2) if ag_t_hc > 0 else 0
 
+                        ag_total_row = pd.DataFrame([{
+                            'Agency': 'Total',
+                            'Week No': week_no,
+                            'HC DS': ag_t_hc_ds,
+                            'HC NS': ag_t_hc_ns,
+                            'Total HC': ag_t_hc,
+                            'SL': ag_t_sl,
+                            'ABWI': ag_t_abwi,
+                            'NCNS': ag_t_ncns,
+                            'Total UPLs': ag_t_upl,
+                            'Trend': f'{ag_t_upl_trend:.2f}%',
+                            'Total PLs': ag_t_pl,
+                            'PL Trend': f'{ag_t_pl_trend:.2f}%',
+                        }])
 
-                    ag_t_hc = agency_df_display['Total HC'].sum()
+                        agency_df_display = pd.concat([agency_df_display, ag_total_row], ignore_index=True)
 
-                    ag_t_sl = agency_df_display['SL'].sum()
+                        # Final reconciliation between Agency-wise and Day-wise totals.
+                        # Since both are based on the same scheduled roster population,
+                        # these should match exactly.  Show a warning instead of hiding
+                        # a data-quality problem if the source files themselves differ.
+                        day_total_hc = int(day_df['Total HC'].sum())
+                        day_total_ds = int(day_df['HC DS'].sum())
+                        day_total_ns = int(day_df['HC NS'].sum())
+                        if (
+                            ag_t_hc != day_total_hc
+                            or ag_t_hc_ds != day_total_ds
+                            or ag_t_hc_ns != day_total_ns
+                        ):
+                            st.warning(
+                                '⚠️ Agency/Day-wise HC reconciliation issue: '
+                                f'Day-wise DS={day_total_ds}, NS={day_total_ns}, HC={day_total_hc}; '
+                                f'Agency-wise DS={ag_t_hc_ds}, NS={ag_t_hc_ns}, HC={ag_t_hc}. '
+                                'Please check the Roster/Dashboard source data for the affected date(s).'
+                            )
 
-                    ag_t_abwi = agency_df_display['ABWI'].sum()
+                        ag_left, ag_right = st.columns([6, 4])
+                        with ag_left:
+                            st.markdown('**Agency wise:-**')
 
-                    ag_t_ncns = agency_df_display['NCNS'].sum()
+                            ag_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
+                            ag_cols = [
+                                'Agency', 'Week No', 'HC DS', 'HC NS', 'Total HC',
+                                'SL', 'ABWI', 'NCNS', 'Total UPLs', 'Trend', 'Total PLs', 'PL Trend'
+                            ]
+                            ag_hdr_colors = [
+                                '#00695c', '#00695c', '#1a237e', '#4a148c', '#0d47a1',
+                                '#e65100', '#e65100', '#e65100', '#b71c1c', '#2e7d32',
+                                '#1565c0', '#2e7d32'
+                            ]
 
-                    ag_t_upl = agency_df_display['Total UPLs'].sum()
-
-                    ag_t_pl = agency_df_display['Total PLs'].sum()
-
-                    ag_t_upl_trend = round((ag_t_upl / ag_t_hc) * 100, 2) if ag_t_hc > 0 else 0
-
-                    ag_t_pl_trend = round((ag_t_pl / ag_t_hc) * 100, 2) if ag_t_hc > 0 else 0
-
-
-
-                    ag_total_row = pd.DataFrame([{
-
-                        'Agency': 'Total',
-
-                        'Week No': week_no,
-
-                        'Total HC': ag_t_hc,
-
-                        'SL': ag_t_sl,
-
-                        'ABWI': ag_t_abwi,
-
-                        'NCNS': ag_t_ncns,
-
-                        'Total UPLs': ag_t_upl,
-
-                        'Trend': f'{ag_t_upl_trend:.2f}%',
-
-                        'Total PLs': ag_t_pl,
-
-                        'PL Trend': f'{ag_t_pl_trend:.2f}%',
-
-                    }])
-
-                    agency_df_display = pd.concat([agency_df_display, ag_total_row], ignore_index=True)
-
-
-
-                    ag_left, ag_right = st.columns([6, 4])
-
-
-
-                    with ag_left:
-
-                        st.markdown("**Agency wise:-**")
-
-                        # Colored HTML table for agency
-
-                        ag_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
-
-                        ag_cols = ['Agency','Week No','Total HC','SL','ABWI','NCNS','Total UPLs','Trend','Total PLs','PL Trend']
-
-                        ag_hdr_colors = ['#00695c','#00695c','#0d47a1','#e65100','#e65100','#e65100','#b71c1c','#2e7d32','#1565c0','#2e7d32']
-
-                        ag_html += '<tr>'
-
-                        for idx_h, col in enumerate(ag_cols):
-
-                            ag_html += f'<td style="padding:5px 6px; background:{ag_hdr_colors[idx_h]}; color:white; font-weight:700; text-align:center; border:1px solid #ddd; white-space:nowrap;">{col}</td>'
-
-                        ag_html += '</tr>'
-
-                        for row_idx in range(len(agency_df_display)):
-
-                            is_total = agency_df_display.iloc[row_idx]['Agency'] == 'Total'
-
-                            bg = '#fff9c4' if is_total else ('#f1f8e9' if row_idx % 2 == 0 else '#ffffff')
-
-                            fw = '700' if is_total else '500'
-
-                            ag_html += f'<tr style="background:{bg};">'
-
-                            for col in ag_cols:
-
-                                val = agency_df_display.iloc[row_idx][col]
-
-                                cell_bg = ''
-
-                                if col == 'Trend' and not is_total:
-
-                                    try:
-
-                                        tv = float(str(val).replace('%',''))
-
-                                        if tv <= 3.00: cell_bg = 'background:#c8e6c9;'
-
-                                        elif tv <= 5.00: cell_bg = 'background:#fff9c4;'
-
-                                        else: cell_bg = 'background:#ffcdd2;'
-
-                                    except: pass
-
-                                if col == 'PL Trend' and not is_total:
-
-                                    try:
-
-                                        tv = float(str(val).replace('%',''))
-
-                                        if tv <= 9.67: cell_bg = 'background:#c8e6c9;'
-
-                                        elif tv <= 11.00: cell_bg = 'background:#fff9c4;'
-
-                                        else: cell_bg = 'background:#ffcdd2;'
-
-                                    except: pass
-
-                                ag_html += f'<td style="padding:4px 6px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} white-space:nowrap;">{val}</td>'
-
+                            ag_html += '<tr>'
+                            for idx_h, col in enumerate(ag_cols):
+                                ag_html += (
+                                    f'<td style="padding:5px 6px; background:{ag_hdr_colors[idx_h]}; '
+                                    f'color:white; font-weight:700; text-align:center; border:1px solid #ddd; '
+                                    f'white-space:nowrap;">{col}</td>'
+                                )
                             ag_html += '</tr>'
 
-                        ag_html += '</table>'
+                            for row_idx in range(len(agency_df_display)):
+                                is_total = agency_df_display.iloc[row_idx]['Agency'] == 'Total'
+                                bg = '#fff9c4' if is_total else ('#f1f8e9' if row_idx % 2 == 0 else '#ffffff')
+                                fw = '700' if is_total else '500'
 
-                        st.markdown(ag_html, unsafe_allow_html=True)
+                                ag_html += f'<tr style="background:{bg};">'
+                                for col in ag_cols:
+                                    val = agency_df_display.iloc[row_idx][col]
+                                    cell_bg = ''
 
+                                    if col == 'Trend' and not is_total:
+                                        try:
+                                            tv = float(str(val).replace('%', ''))
+                                            if tv <= 3.00:
+                                                cell_bg = 'background:#c8e6c9;'
+                                            elif tv <= 5.00:
+                                                cell_bg = 'background:#fff9c4;'
+                                            else:
+                                                cell_bg = 'background:#ffcdd2;'
+                                        except Exception:
+                                            pass
 
+                                    if col == 'PL Trend' and not is_total:
+                                        try:
+                                            tv = float(str(val).replace('%', ''))
+                                            if tv <= 9.67:
+                                                cell_bg = 'background:#c8e6c9;'
+                                            elif tv <= 11.00:
+                                                cell_bg = 'background:#fff9c4;'
+                                            else:
+                                                cell_bg = 'background:#ffcdd2;'
+                                        except Exception:
+                                            pass
 
-                    with ag_right:
+                                    ag_html += (
+                                        f'<td style="padding:4px 6px; text-align:center; border:1px solid #ddd; '
+                                        f'font-weight:{fw}; {cell_bg} white-space:nowrap;">{val}</td>'
+                                    )
+                                ag_html += '</tr>'
 
-                        st.markdown("#### 📊 Agency UPL Share")
+                            ag_html += '</table>'
+                            st.markdown(ag_html, unsafe_allow_html=True)
 
-                        chart_data = agency_df_display[agency_df_display['Agency'] != 'Total'][['Agency', 'Total UPLs']].copy()
+                        with ag_right:
+                            st.markdown('#### 📊 Agency UPL Share')
+                            chart_data = agency_df_display[agency_df_display['Agency'] != 'Total'][['Agency', 'Total UPLs']].copy()
+                            chart_data = chart_data.sort_values('Total UPLs', ascending=False).reset_index(drop=True)
 
-                        chart_data = chart_data.sort_values('Total UPLs', ascending=False).reset_index(drop=True)
+                            gradient_colors = ['#b71c1c', '#e53935', '#f57c00', '#fdd835', '#81c784', '#2e7d32']
+                            num_bars = len(chart_data)
+                            bar_colors = gradient_colors[:num_bars] if num_bars <= len(gradient_colors) else gradient_colors
+                            chart_data['Color'] = bar_colors[:num_bars]
+                            agency_order = chart_data['Agency'].tolist()
 
+                            bar_chart = alt.Chart(chart_data).mark_bar(
+                                cornerRadiusTopLeft=6,
+                                cornerRadiusTopRight=6,
+                                size=28,
+                            ).encode(
+                                x=alt.X('Agency:N', sort=agency_order, axis=alt.Axis(labelAngle=-45, labelFontSize=10)),
+                                y=alt.Y('Total UPLs:Q', title='Total UPL Count'),
+                                color=alt.Color(
+                                    'Agency:N', legend=None,
+                                    scale=alt.Scale(domain=agency_order, range=bar_colors[:num_bars])
+                                ),
+                                tooltip=['Agency', 'Total UPLs']
+                            ).properties(height=320)
 
+                            st.altair_chart(bar_chart, use_container_width=True)
 
-                        # Color gradient: dark red (highest) -> light red -> orange -> yellow -> light green -> green (lowest)
-
-                        gradient_colors = ['#b71c1c', '#e53935', '#f57c00', '#fdd835', '#81c784', '#2e7d32']
-
-                        num_bars = len(chart_data)
-
-                        bar_colors = gradient_colors[:num_bars] if num_bars <= len(gradient_colors) else gradient_colors
-
-
-
-                        chart_data['Color'] = bar_colors[:num_bars]
-
-                        agency_order = chart_data['Agency'].tolist()
-
-
-
-                        bar_chart = alt.Chart(chart_data).mark_bar(
-
-                            cornerRadiusTopLeft=6,
-
-                            cornerRadiusTopRight=6,
-
-                            size=28,
-
-                        ).encode(
-
-                            x=alt.X('Agency:N', sort=agency_order, axis=alt.Axis(labelAngle=-45, labelFontSize=10)),
-
-                            y=alt.Y('Total UPLs:Q', title='Total UPL Count'),
-
-                            color=alt.Color('Agency:N', legend=None, scale=alt.Scale(
-
-                                domain=agency_order,
-
-                                range=bar_colors[:num_bars]
-
-                            )),
-
-                            tooltip=['Agency', 'Total UPLs']
-
-                        ).properties(height=320)
-
-                        st.altair_chart(bar_chart, use_container_width=True)
-
-
-
-                # ===== BOX 3: SUMMARY + PIE CHART side by side =====
+# ===== BOX 3: SUMMARY + PIE CHART side by side =====
 
                 st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 
                 st.markdown("**Summary:-**")
-
-
 
                 # Build per-week summary from day_wise_data
 
@@ -3142,11 +2617,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                         weeks_summary[wk]['pl_target_wsum'] += row['_PLTargetNum'] * row['Total HC']
 
-
-
                 sum_left, sum_right = st.columns([6, 4])
-
-
 
                 with sum_left:
 
@@ -3154,25 +2625,17 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     num_weeks = len(sorted_weeks)
 
-
-
                     # Build table with weeks as COLUMNS
 
                     tbl = '<table style="border-collapse:collapse; width:100%; font-size:13px; font-weight:600; border:2px solid #000;">'
-
-
 
                     # Title row
 
                     tbl += '<tr style="background:#b0c4de; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:8px; border:2px solid #000; font-size:15px; font-weight:800;">UPL Trend</td></tr>'
 
-
-
                     # ---- UNPLANNED LEAVE SECTION ----
 
                     tbl += '<tr style="background:#fde0d0; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Unplanned Leave</td></tr>'
-
-
 
                     # Week header row
 
@@ -3185,8 +2648,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week ' + str(wk) + '</td>'
 
                     tbl += '</tr>'
-
-
 
                     # Target row
 
@@ -3201,8 +2662,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_upl_target:.2f}' + '%</td>'
 
                     tbl += '</tr>'
-
-
 
                     # Actual UPL row
 
@@ -3220,13 +2679,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     tbl += '</tr>'
 
-
-
                     # ---- PLANNED LEAVE SECTION ----
 
                     tbl += '<tr style="background:#fde0d0; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Planned Leave</td></tr>'
-
-
 
                     # Week header row
 
@@ -3239,8 +2694,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week ' + str(wk) + '</td>'
 
                     tbl += '</tr>'
-
-
 
                     # Target row
 
@@ -3255,8 +2708,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_pl_target:.2f}' + '%</td>'
 
                     tbl += '</tr>'
-
-
 
                     # Actual PL row
 
@@ -3273,8 +2724,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:7px; border:2px solid #000; background:#f1c40f; color:#000; font-weight:700;">' + str(wk_pl_trend) + '%</td>'
 
                     tbl += '</tr>'
-
-
 
                     tbl += '</table>'
 
@@ -3304,8 +2753,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                         chart_rows.append({'Week': wk_label, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
 
-
-
                     trend_df = pd.DataFrame(chart_rows)
 
                     week_order = [f'Week {wk}' for wk in sorted_weeks]
@@ -3318,8 +2765,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     )
 
-
-
                     base = alt.Chart(trend_df).encode(
 
                         x=alt.X('Week:N', sort=week_order, title=None),
@@ -3327,8 +2772,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         xOffset=alt.XOffset('Metric:N'),
 
                     )
-
-
 
                     trend_bars = base.mark_bar(size=22, opacity=0.55).encode(
 
@@ -3350,8 +2793,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     )
 
-
-
                     trend_line = base.mark_line(
 
                         point=alt.OverlayMarkDef(filled=True, size=70, stroke='white', strokeWidth=1.5),
@@ -3368,8 +2809,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     )
 
-
-
                     trend_labels = base.mark_text(
 
                         dy=-12, fontSize=10, fontWeight='bold'
@@ -3384,8 +2823,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     )
 
-
-
                     st.altair_chart(
 
                         (trend_bars + trend_line + trend_labels).properties(height=280),
@@ -3393,8 +2830,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         use_container_width=True,
 
                     )
-
-
 
             if target_fallback_used:
 
@@ -3412,17 +2847,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 )
 
-
-
             if upl_missing_dates:
 
                 st.warning(f"⚠️ Missing UPL files for: {', '.join(upl_missing_dates)}")
 
-
-
         st.markdown("</div>", unsafe_allow_html=True)
-
-
 
     # EXISTING MIS VIEWS
 
@@ -3431,8 +2860,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         if not final_df.empty:
 
             display_df = final_df.copy()
-
-
 
             if st.session_state.selected_view == "rep_mispunches":
 
@@ -3446,25 +2873,15 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 display_df = defaulters.copy()
 
-
-
             display_df.sort_values(by=["P.Soft ID", "Date"], inplace=True)
-
-
 
             st.subheader(f"📊 Results View ({len(display_df)} Records)")
 
-
-
             col_search, col_download = st.columns([7, 3])
-
-
 
             with col_search:
 
                 search = st.text_input("🔍 Search Employee by Name or ID...")
-
-
 
             with col_download:
 
@@ -3486,8 +2903,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 )
 
-
-
             if search and not display_df.empty and "Employee Name" in display_df.columns:
 
                 display_df = display_df[
@@ -3498,8 +2913,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 ]
 
-
-
             cols_to_drop = ["Issue Type"]
 
             if st.session_state.selected_view in ["defaulters", "rep_defaulters"]:
@@ -3508,15 +2921,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                 cols_to_drop.extend([c for c in display_df.columns if "IN" in c or "OUT" in c])
 
-
-
             final_display_df = display_df.drop(
 
                 columns=[c for c in cols_to_drop if c in display_df.columns]
 
             )
-
-
 
             try:
 
@@ -3535,8 +2944,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     selection_mode="single-row",
 
                 )
-
-
 
                 if (
 
@@ -3568,8 +2975,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     )
 
-
-
             except Exception:
 
                 st.dataframe(
@@ -3594,8 +2999,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             )
 
-
-
     # MISSING FILE WARNING
 
     all_missing = sorted(set(missing_files + upl_missing))
@@ -3610,15 +3013,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
         )
 
-
-
 else:
 
     # DEFAULT FEATURE CARDS
 
     c1, c2, c3, c4 = st.columns(4)
-
-
 
     with c1:
 
@@ -3642,8 +3041,6 @@ else:
 
         )
 
-
-
     with c2:
 
         st.markdown(
@@ -3666,8 +3063,6 @@ else:
 
         )
 
-
-
     with c3:
 
         st.markdown(
@@ -3689,8 +3084,6 @@ else:
             unsafe_allow_html=True,
 
         )
-
-
 
     with c4:
 
@@ -3715,9 +3108,6 @@ else:
         )
 
 
-
-
-
 # ==========================================================
 
 # FOOTER
@@ -3732,8 +3122,6 @@ st.markdown(
 
 )
 
-
-
 st.markdown(
 
     "<p style='text-align:center; color:#64748b; font-size:11px; font-weight:600; margin:0;'>"
@@ -3745,4 +3133,3 @@ st.markdown(
     unsafe_allow_html=True,
 
 ) 
-
