@@ -1199,7 +1199,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
         # Find UPL files for selected date range
         upl_files_found = []
-        upl_missing_dates = []
+        upl_missing_dates = []   # genuinely missing UPL files for a date
+        upl_mismatch_dates = []  # files found, but Roster/Dashboard HC don't reconcile
+        upl_error_dates = []     # files found, but couldn't be parsed
         start_d, end_d = selected_dates_range
         upl_date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
 
@@ -1293,10 +1295,10 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     # doesn't reconcile with the Dashboard tab, instead of silently
                     # showing mismatched totals downstream.
                     if hc_from_roster != total_hc or upl_from_roster != upl_total or pl_from_roster != pl_total:
-                        upl_missing_dates.append(
-                            f"{d.strftime('%d-%b-%y')} (Roster/Dashboard mismatch after filtering — "
-                            f"HC {hc_from_roster} vs {total_hc}, UPL {upl_from_roster} vs {upl_total}, "
-                            f"PL {pl_from_roster} vs {pl_total} — check Roster sheet for that date)"
+                        upl_mismatch_dates.append(
+                            f"{d.strftime('%d-%b-%y')}: Roster-filtered HC {hc_from_roster} vs "
+                            f"Dashboard HC {total_hc}, UPL {upl_from_roster} vs {upl_total}, "
+                            f"PL {pl_from_roster} vs {pl_total}"
                         )
 
                     # Collect roster for agency report
@@ -1324,7 +1326,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         '_PLTargetNum': pl_target_val,
                     })
                 except Exception:
-                    upl_missing_dates.append(d.strftime('%d-%b-%y') + " (error)")
+                    upl_error_dates.append(d.strftime('%d-%b-%y'))
 
             if day_wise_data:
                 day_df = pd.DataFrame(day_wise_data)
@@ -1660,28 +1662,24 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     )
 
                     base = alt.Chart(trend_df).encode(
-                        x=alt.X('Week:N', sort=week_order, title=None),
-                        xOffset=alt.XOffset('Metric:N'),
-                    )
-
-                    trend_bars = base.mark_bar(size=22, opacity=0.55).encode(
-                        y=alt.Y('Actual %:Q', title='Actual %'),
-                        color=alt.Color('Metric:N', scale=metric_colors, legend=alt.Legend(
-                            orient='bottom',
-                            labelFontSize=11,
-                            labelFontWeight='bold',
-                            title=None
-                        )),
-                        tooltip=['Week', 'Metric', 'Actual %']
+                        x=alt.X('Week:N', sort=week_order, title=None,
+                                axis=alt.Axis(domain=True, ticks=True, grid=False)),
                     )
 
                     trend_line = base.mark_line(
                         point=alt.OverlayMarkDef(filled=True, size=70, stroke='white', strokeWidth=1.5),
                         strokeWidth=2.5,
                     ).encode(
-                        y=alt.Y('Actual %:Q'),
-                        color=alt.Color('Metric:N', scale=metric_colors, legend=None),
+                        y=alt.Y('Actual %:Q', title='Actual %',
+                                axis=alt.Axis(domain=True, ticks=True, grid=True)),
+                        color=alt.Color('Metric:N', scale=metric_colors, legend=alt.Legend(
+                            orient='bottom',
+                            labelFontSize=11,
+                            labelFontWeight='bold',
+                            title=None
+                        )),
                         detail='Metric:N',
+                        tooltip=['Week', 'Metric', 'Actual %']
                     )
 
                     trend_labels = base.mark_text(
@@ -1690,10 +1688,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         y=alt.Y('Actual %:Q'),
                         text=alt.Text('Actual %:Q', format='.2f'),
                         color=alt.Color('Metric:N', scale=metric_colors, legend=None),
+                        detail='Metric:N',
                     )
 
                     st.altair_chart(
-                        (trend_bars + trend_line + trend_labels).properties(height=280),
+                        (trend_line + trend_labels).properties(height=280),
                         use_container_width=True,
                     )
 
@@ -1708,6 +1707,18 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             if upl_missing_dates:
                 st.warning(f"⚠️ Missing UPL files for: {', '.join(upl_missing_dates)}")
+
+            if upl_mismatch_dates:
+                st.error(
+                    "🔴 Day-wise vs Agency-wise HC won't reconcile for: "
+                    + " | ".join(upl_mismatch_dates)
+                    + " — Total HC on Dashboard doesn't match the filtered Roster count for "
+                      "that date. Check the Roster sheet for that day (Building / Type / 3P "
+                      "agency tag on the affected rows)."
+                )
+
+            if upl_error_dates:
+                st.warning(f"⚠️ Could not read UPL file for: {', '.join(upl_error_dates)}")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
