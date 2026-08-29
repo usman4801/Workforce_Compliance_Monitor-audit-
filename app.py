@@ -1694,20 +1694,40 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     tbl += '</table>'
                     st.markdown(tbl, unsafe_allow_html=True)
                 with sum_right:
-                    # Weekly bar + line combo — one bar per week per metric, with a
-                    # connected line + circle markers on top showing the same value,
-                    # labeled with the number above each marker (Week 32, Week 33, ...).
-                    chart_rows = []
-                    for wk in sorted_weeks:
+                    # Weekly double-line (mountain) chart. With 2+ weeks selected,
+                    # the two lines follow the real week-to-week values. With only
+                    # ONE week selected there's only one data point per metric, so a
+                    # line has nothing to connect to and would collapse to a dot —
+                    # to still show two visible lines, we pad the same single value
+                    # onto invisible categories on either side, so each metric draws
+                    # as a flat horizontal line spanning the chart, with the real
+                    # point/label only shown at the actual "Week NN" position.
+                    if num_weeks == 1:
+                        wk = sorted_weeks[0]
                         wk_hc = weeks_summary[wk]['hc']
                         wk_upl_trend = round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
                         wk_pl_trend = round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
                         wk_label = f'Week {wk}'
-                        chart_rows.append({'Week': wk_label, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
-                        chart_rows.append({'Week': wk_label, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
+                        week_order = [' ', wk_label, '  ']  # blank pad cols, unique keys
+                        chart_rows = []
+                        for lbl in week_order:
+                            chart_rows.append({'Week': lbl, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
+                            chart_rows.append({'Week': lbl, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
+                        trend_df = pd.DataFrame(chart_rows)
+                        label_df = trend_df[trend_df['Week'] == wk_label]
+                    else:
+                        week_order = [f'Week {wk}' for wk in sorted_weeks]
+                        chart_rows = []
+                        for wk in sorted_weeks:
+                            wk_hc = weeks_summary[wk]['hc']
+                            wk_upl_trend = round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                            wk_pl_trend = round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                            wk_label = f'Week {wk}'
+                            chart_rows.append({'Week': wk_label, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
+                            chart_rows.append({'Week': wk_label, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
+                        trend_df = pd.DataFrame(chart_rows)
+                        label_df = trend_df
 
-                    trend_df = pd.DataFrame(chart_rows)
-                    week_order = [f'Week {wk}' for wk in sorted_weeks]
                     metric_colors = alt.Scale(
                         domain=['Planned Leave', 'Unplanned Leave'],
                         range=['#3b82f6', '#f97316']
@@ -1720,7 +1740,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     trend_area = base.mark_area(
                         line={'strokeWidth': 2.5},
-                        point=alt.OverlayMarkDef(filled=True, size=70, stroke='white', strokeWidth=1.5),
                         opacity=0.35,
                         interpolate='monotone',
                     ).encode(
@@ -1736,9 +1755,19 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tooltip=['Week', 'Metric', 'Actual %']
                     )
 
-                    trend_labels = base.mark_text(
+                    trend_points = alt.Chart(label_df).mark_point(
+                        filled=True, size=70, stroke='white', strokeWidth=1.5
+                    ).encode(
+                        x=alt.X('Week:N', sort=week_order),
+                        y=alt.Y('Actual %:Q'),
+                        color=alt.Color('Metric:N', scale=metric_colors, legend=None),
+                        detail='Metric:N',
+                    )
+
+                    trend_labels = alt.Chart(label_df).mark_text(
                         dy=-12, fontSize=10, fontWeight='bold'
                     ).encode(
+                        x=alt.X('Week:N', sort=week_order),
                         y=alt.Y('Actual %:Q'),
                         text=alt.Text('Actual %:Q', format='.2f'),
                         color=alt.Color('Metric:N', scale=metric_colors, legend=None),
@@ -1746,7 +1775,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     )
 
                     st.altair_chart(
-                        (trend_area + trend_labels).properties(height=280),
+                        (trend_area + trend_points + trend_labels).properties(height=280),
                         use_container_width=True,
                     )
 
