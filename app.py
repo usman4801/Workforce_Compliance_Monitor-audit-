@@ -1195,6 +1195,13 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
             day_wise_data = []
             all_roster_scheduled = []
 
+            # Same exclusion list used everywhere else in the app, applied here too
+            upl_exclude_list = (
+                [clean_id(x) for x in exclude_ids_input.split(",") if str(x).strip()]
+                if exclude_ids_input
+                else []
+            )
+
             for d, fname in upl_files_found:
                 try:
                     dash = pd.read_excel(fname, sheet_name='Dashboard', dtype=str, header=None)
@@ -1206,13 +1213,53 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     upl_total = int(dash.iloc[8, 6])
                     pl_total = int(dash.iloc[8, 4])
 
-                    # Get ABWI from Roster
+                    # Roster sheet: mirror the SAME filters the Dashboard tab applies,
+                    # so the Agency-wise table (built from this "scheduled" frame)
+                    # always reconciles with the Day-wise table above.
+                    #   1) Building must match the selected site (Roster mixes AUH1/AUH3/DAD1 etc.)
+                    #   2) Drop IDs on the sidebar "IDs to Ignore" list
+                    #   3) Type == 'Direct' only (Dashboard excludes 'Support' staff)
+                    #   4) Normalize agency name casing (e.g. 'QuessCorp' -> 'Quesscorp')
                     rdf = pd.read_excel(fname, sheet_name='Roster', dtype=str, header=None)
-                    roster = rdf.iloc[6:]
+                    roster = rdf.iloc[6:].copy()
                     roster.columns = [str(c).strip() for c in rdf.iloc[5].tolist()]
-                    scheduled = roster[roster['Attendance'] != 'OFF'].copy()
+
+                    roster['_Clean_ID'] = roster['Psoft No'].apply(clean_id)
+
+                    if 'Building' in roster.columns:
+                        roster = roster[roster['Building'] == selected_warehouse]
+
+                    if upl_exclude_list:
+                        roster = roster[~roster['_Clean_ID'].isin(upl_exclude_list)]
+
+                    if 'Type' in roster.columns:
+                        roster = roster[roster['Type'] == 'Direct']
+
+                    if '3P' in roster.columns:
+                        roster['3P'] = roster['3P'].replace('QuessCorp', 'Quesscorp')
+
+                    scheduled = roster[
+                        (roster['Attendance'] != 'OFF')
+                        & (roster['Attendance'].notna())
+                        & (roster['Attendance'].astype(str).str.strip() != '')
+                    ].copy()
+
                     abwi_count = len(scheduled[scheduled['Attendance'] == 'ABWI'])
-                    ab_count = ab_abwi - abwi_count if ab_abwi >= abwi_count else ab_abwi
+                    ab_count = len(scheduled[scheduled['Attendance'] == 'AB'])
+                    sl_from_roster = len(scheduled[scheduled['Attendance'] == 'SL'])
+                    pl_from_roster = len(scheduled[scheduled['Attendance'] == 'PL'])
+                    upl_from_roster = sl_from_roster + ab_count + abwi_count
+                    hc_from_roster = len(scheduled)
+
+                    # Sanity check: flag any day where the filtered Roster still
+                    # doesn't reconcile with the Dashboard tab, instead of silently
+                    # showing mismatched totals downstream.
+                    if hc_from_roster != total_hc or upl_from_roster != upl_total or pl_from_roster != pl_total:
+                        upl_missing_dates.append(
+                            f"{d.strftime('%d-%b-%y')} (Roster/Dashboard mismatch after filtering — "
+                            f"HC {hc_from_roster} vs {total_hc}, UPL {upl_from_roster} vs {upl_total}, "
+                            f"PL {pl_from_roster} vs {pl_total} — check Roster sheet for that date)"
+                        )
 
                     # Collect roster for agency report
                     scheduled['_date'] = d.strftime('%d-%b-%y')
