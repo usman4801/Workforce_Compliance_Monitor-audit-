@@ -295,6 +295,31 @@ def percentage(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
 
 
+def safe_cell(df, row, col):
+    """Safely read a cell from a DataFrame, returning None if out of range/blank."""
+    try:
+        val = df.iloc[row, col]
+        if pd.isna(val):
+            return None
+        return val
+    except Exception:
+        return None
+
+
+def parse_target_pct(val, default):
+    """Parse a target percentage from a cell value like '3.50%', '3.50', or 3.5.
+    Falls back to `default` if the cell is missing, blank, or unparseable."""
+    if val is None:
+        return default, False
+    try:
+        s = str(val).strip().replace('%', '')
+        if s == '' or s.lower() in ['nan', 'none']:
+            return default, False
+        return round(float(s), 2), True
+    except Exception:
+        return default, False
+
+
 # ==========================================================
 # HEADER
 # ==========================================================
@@ -1194,6 +1219,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
             # Process Day wise from Dashboard sheet
             day_wise_data = []
             all_roster_scheduled = []
+            target_fallback_used = False
 
             # Same exclusion list used everywhere else in the app, applied here too
             upl_exclude_list = (
@@ -1212,6 +1238,18 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     ab_abwi = int(dash.iloc[27, 8])
                     upl_total = int(dash.iloc[8, 6])
                     pl_total = int(dash.iloc[8, 4])
+
+                    # Weekly target, read from the Dashboard sheet: put "UPL Target"
+                    # and "PL Target" labels in cells N2/O2 (row idx 1, col idx 13/14)
+                    # and the numeric % values right below in N3/O3 (row idx 2, col idx 13/14).
+                    # (Cols H:M on rows 2-3 are already merged for the existing header
+                    # block, so N/O — the next free unmerged columns — are used instead.)
+                    # Falls back to 3.50% / 9.67% if those cells are blank/missing,
+                    # so older files without the new column still work.
+                    upl_target_val, upl_target_found = parse_target_pct(safe_cell(dash, 2, 13), 3.50)
+                    pl_target_val, pl_target_found = parse_target_pct(safe_cell(dash, 2, 14), 9.67)
+                    if not upl_target_found or not pl_target_found:
+                        target_fallback_used = True
 
                     # Roster sheet: mirror the SAME filters the Dashboard tab applies,
                     # so the Agency-wise table (built from this "scheduled" frame)
@@ -1277,11 +1315,13 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         'AB': ab_count,
                         'ABWI': abwi_count,
                         'Total UPLs': upl_total,
-                        'Target': '3.50%',
+                        'Target': f'{upl_target_val:.2f}%',
                         'Trend': f'{upl_trend:.2f}%',
                         'Total PLs': pl_total,
-                        'Target ': '9.67%',
+                        'Target ': f'{pl_target_val:.2f}%',
                         'Trend ': f'{pl_trend:.2f}%',
+                        '_UPLTargetNum': upl_target_val,
+                        '_PLTargetNum': pl_target_val,
                     })
                 except Exception:
                     upl_missing_dates.append(d.strftime('%d-%b-%y') + " (error)")
@@ -1301,6 +1341,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 t_upl_trend = round((t_upl / t_hc) * 100, 2) if t_hc > 0 else 0
                 t_pl_trend = round((t_pl / t_hc) * 100, 2) if t_hc > 0 else 0
 
+                # HC-weighted average target across the selected days (handles a
+                # date range that spans more than one week with different targets).
+                t_upl_target = round((day_df['_UPLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 3.50
+                t_pl_target = round((day_df['_PLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 9.67
+
                 # Week number from selected dates (ISO week + 1 to match your system)
                 week_no = get_week(upl_files_found[0][0])
 
@@ -1317,13 +1362,19 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     'AB': t_ab,
                     'ABWI': t_abwi,
                     'Total UPLs': t_upl,
-                    'Target': '3.50%',
+                    'Target': f'{t_upl_target:.2f}%',
                     'Trend': f'{t_upl_trend:.2f}%',
                     'Total PLs': t_pl,
-                    'Target ': '9.67%',
+                    'Target ': f'{t_pl_target:.2f}%',
                     'Trend ': f'{t_pl_trend:.2f}%',
                 }])
                 display_day = pd.concat([display_day, total_row_df], ignore_index=True)
+
+                # Per-row numeric targets, in the same row order as display_day,
+                # used below to color Trend cells relative to each row's own target
+                # instead of a single hardcoded threshold.
+                row_upl_targets = list(day_df['_UPLTargetNum']) + [t_upl_target]
+                row_pl_targets = list(day_df['_PLTargetNum']) + [t_pl_target]
 
                 # Build colored HTML table for Day wise
                 day_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
@@ -1346,9 +1397,10 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         if col == 'Trend' and not is_total:
                             try:
                                 trend_val = float(str(val).replace('%',''))
-                                if trend_val <= 2.50:
+                                row_target = row_upl_targets[row_idx]
+                                if trend_val <= row_target - 1.00:
                                     cell_bg = 'background:#c8e6c9;'
-                                elif trend_val <= 3.50:
+                                elif trend_val <= row_target:
                                     cell_bg = 'background:#fff9c4;'
                                 else:
                                     cell_bg = 'background:#ffcdd2;'
@@ -1356,9 +1408,10 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         if col == 'Trend ' and not is_total:
                             try:
                                 trend_val = float(str(val).replace('%',''))
-                                if trend_val <= 9.67:
+                                row_target = row_pl_targets[row_idx]
+                                if trend_val <= row_target:
                                     cell_bg = 'background:#c8e6c9;'
-                                elif trend_val <= 10.50:
+                                elif trend_val <= row_target + 0.83:
                                     cell_bg = 'background:#fff9c4;'
                                 else:
                                     cell_bg = 'background:#ffcdd2;'
@@ -1501,7 +1554,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 for d, fname in upl_files_found:
                     wk = get_week(d)
                     if wk not in weeks_summary:
-                        weeks_summary[wk] = {'hc': 0, 'upl': 0, 'pl': 0}
+                        weeks_summary[wk] = {'hc': 0, 'upl': 0, 'pl': 0, 'upl_target_wsum': 0.0, 'pl_target_wsum': 0.0}
                 for row in day_wise_data:
                     row_date_str = row['Date']
                     row_date = None
@@ -1514,6 +1567,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         weeks_summary[wk]['hc'] += row['Total HC']
                         weeks_summary[wk]['upl'] += row['Total UPLs']
                         weeks_summary[wk]['pl'] += row['Total PLs']
+                        # HC-weighted target, in case a week ever mixes two target values
+                        weeks_summary[wk]['upl_target_wsum'] += row['_UPLTargetNum'] * row['Total HC']
+                        weeks_summary[wk]['pl_target_wsum'] += row['_PLTargetNum'] * row['Total HC']
 
                 sum_left, sum_right = st.columns([6, 4])
 
@@ -1540,7 +1596,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     # Target row
                     tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
                     for wk in sorted_weeks:
-                        tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">3.50%</td>'
+                        wk_hc_t = weeks_summary[wk]['hc']
+                        wk_upl_target = round(weeks_summary[wk]['upl_target_wsum'] / wk_hc_t, 2) if wk_hc_t > 0 else 3.50
+                        tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_upl_target:.2f}' + '%</td>'
                     tbl += '</tr>'
 
                     # Actual UPL row
@@ -1565,7 +1623,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     # Target row
                     tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
                     for wk in sorted_weeks:
-                        tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">9.67%</td>'
+                        wk_hc_t = weeks_summary[wk]['hc']
+                        wk_pl_target = round(weeks_summary[wk]['pl_target_wsum'] / wk_hc_t, 2) if wk_hc_t > 0 else 9.67
+                        tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_pl_target:.2f}' + '%</td>'
                     tbl += '</tr>'
 
                     # Actual PL row
@@ -1580,19 +1640,24 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     tbl += '</table>'
                     st.markdown(tbl, unsafe_allow_html=True)
                 with sum_right:
-                    # Calculate percentages for display
-                    total_leaves = int(t_pl) + int(t_upl)
-                    pl_pct = round((int(t_pl) / total_leaves) * 100, 1) if total_leaves > 0 else 0
-                    upl_pct = round((int(t_upl) / total_leaves) * 100, 1) if total_leaves > 0 else 0
+                    # Weekly trend line chart (with markers) — UPL % and PL % actuals
+                    # by week, mirroring the weeks shown in the table on the left.
+                    chart_rows = []
+                    for wk in sorted_weeks:
+                        wk_hc = weeks_summary[wk]['hc']
+                        wk_upl_trend = round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                        wk_pl_trend = round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                        wk_label = f'Week {wk}'
+                        chart_rows.append({'Week': wk_label, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
+                        chart_rows.append({'Week': wk_label, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
 
-                    pie_data = pd.DataFrame({
-                        'Category': ['Planned Leave', 'Unplanned Leave'],
-                        'Count': [int(t_pl), int(t_upl)],
-                        'Label': [f'Planned Leave {pl_pct}%', f'Unplanned Leave {upl_pct}%']
-                    })
-                    pie_chart = alt.Chart(pie_data).mark_arc(innerRadius=30, outerRadius=65).encode(
-                        theta=alt.Theta('Count:Q'),
-                        color=alt.Color('Category:N', scale=alt.Scale(
+                    trend_df = pd.DataFrame(chart_rows)
+                    week_order = [f'Week {wk}' for wk in sorted_weeks]
+
+                    trend_line = alt.Chart(trend_df).mark_line(point=True, strokeWidth=3).encode(
+                        x=alt.X('Week:N', sort=week_order, title=None),
+                        y=alt.Y('Actual %:Q', title='Actual %'),
+                        color=alt.Color('Metric:N', scale=alt.Scale(
                             domain=['Planned Leave', 'Unplanned Leave'],
                             range=['#3b82f6', '#f97316']
                         ), legend=alt.Legend(
@@ -1601,19 +1666,31 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                             labelFontWeight='bold',
                             title=None
                         )),
-                        tooltip=['Label', 'Count']
-                    ).properties(height=200, width=200)
+                        tooltip=['Week', 'Metric', 'Actual %']
+                    ).properties(height=260)
 
-                    # Add text labels on pie
-                    pie_text = alt.Chart(pie_data).mark_text(
-                        radius=85, fontSize=11, fontWeight='bold'
+                    trend_labels = alt.Chart(trend_df).mark_text(
+                        dy=-12, fontSize=10, fontWeight='bold'
                     ).encode(
-                        theta=alt.Theta('Count:Q', stack=True),
-                        text=alt.Text('Label:N'),
-                        color=alt.value('#000000')
+                        x=alt.X('Week:N', sort=week_order),
+                        y=alt.Y('Actual %:Q'),
+                        text=alt.Text('Actual %:Q', format='.2f'),
+                        color=alt.Color('Metric:N', scale=alt.Scale(
+                            domain=['Planned Leave', 'Unplanned Leave'],
+                            range=['#3b82f6', '#f97316']
+                        ), legend=None)
                     )
 
-                    st.altair_chart(pie_chart + pie_text, use_container_width=True)
+                    st.altair_chart(trend_line + trend_labels, use_container_width=True)
+
+            if target_fallback_used:
+                st.info(
+                    "ℹ️ Target column not found in one or more UPL files for the selected "
+                    "dates — used the default (3.50% UPL / 9.67% PL) for those days. "
+                    "Add the Target values to the Dashboard sheet (cell N3 for UPL Target, "
+                    "O3 for PL Target — with 'UPL Target' / 'PL Target' as labels in N2/O2) "
+                    "to show this week's actual target instead."
+                )
 
             if upl_missing_dates:
                 st.warning(f"⚠️ Missing UPL files for: {', '.join(upl_missing_dates)}")
