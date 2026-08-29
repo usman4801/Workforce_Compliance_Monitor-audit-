@@ -1305,21 +1305,29 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     scheduled['_date'] = d.strftime('%d-%b-%y')
                     all_roster_scheduled.append(scheduled)
 
-                    upl_trend = round((upl_total / total_hc) * 100, 2) if total_hc > 0 else 0
-                    pl_trend = round((pl_total / total_hc) * 100, 2) if total_hc > 0 else 0
+                    # Day-wise now uses the SAME Roster-derived counts as Agency-wise
+                    # (hc_from_roster / sl_from_roster / upl_from_roster / pl_from_roster)
+                    # instead of the separate Dashboard-sheet cells, so the two tables
+                    # always add up to the same Total HC / UPLs / PLs by construction.
+                    # HC DS / HC NS stay Dashboard-sourced below — Roster has no shift
+                    # column to split them — so if HC DS + HC NS no longer equals the
+                    # new Total HC for a date, that gap is the same mismatch already
+                    # called out in the red banner further down, for that date.
+                    upl_trend = round((upl_from_roster / hc_from_roster) * 100, 2) if hc_from_roster > 0 else 0
+                    pl_trend = round((pl_from_roster / hc_from_roster) * 100, 2) if hc_from_roster > 0 else 0
 
                     day_wise_data.append({
                         'Date': d.strftime('%d-%b-%y'),
                         'HC DS': hc_ds,
                         'HC NS': hc_ns,
-                        'Total HC': total_hc,
-                        'SL': sl,
+                        'Total HC': hc_from_roster,
+                        'SL': sl_from_roster,
                         'AB': ab_count,
                         'ABWI': abwi_count,
-                        'Total UPLs': upl_total,
+                        'Total UPLs': upl_from_roster,
                         'Target': f'{upl_target_val:.2f}%',
                         'Trend': f'{upl_trend:.2f}%',
-                        'Total PLs': pl_total,
+                        'Total PLs': pl_from_roster,
                         'Target ': f'{pl_target_val:.2f}%',
                         'Trend ': f'{pl_trend:.2f}%',
                         '_UPLTargetNum': upl_target_val,
@@ -1710,11 +1718,13 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             if upl_mismatch_dates:
                 st.error(
-                    "🔴 Day-wise vs Agency-wise HC won't reconcile for: "
+                    "🔴 Dashboard sheet vs Roster sheet don't reconcile for: "
                     + " | ".join(upl_mismatch_dates)
-                    + " — Total HC on Dashboard doesn't match the filtered Roster count for "
-                      "that date. Check the Roster sheet for that day (Building / Type / 3P "
-                      "agency tag on the affected rows)."
+                    + " — Day-wise and Agency-wise tables now both use the Roster-derived "
+                      "count (so they always match each other), but that means they may "
+                      "differ from the Dashboard sheet's own HC/UPL/PL cells for these dates. "
+                      "Check the Roster sheet for that day (Building / Type / 3P agency tag "
+                      "on the affected rows) if the Dashboard figure was the correct one."
                 )
 
             if upl_error_dates:
