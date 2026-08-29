@@ -1630,7 +1630,10 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 if col == 'PL Trend' and not is_total:
                                     try:
                                         tv = float(str(val).replace('%',''))
-                                        cell_bg = f'background:{heat_color(tv, ag_pl_vmin, ag_pl_vmax)};'
+                                        if tv > 7.16:
+                                            cell_bg = 'background:#ffcdd2;'  # above 7.16%: light red
+                                        else:
+                                            cell_bg = 'background:#c8e6c9;'  # at or below 7.16%: light green
                                     except: pass
                                 ag_html += f'<td style="padding:4px 6px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} white-space:nowrap;">{val}</td>'
                             ag_html += '</tr>'
