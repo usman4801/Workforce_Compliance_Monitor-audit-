@@ -1527,10 +1527,8 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 row_target = row_pl_targets[row_idx]
                                 if trend_val > row_target:
                                     cell_bg = 'background:#ffcdd2;'  # above target: light red
-                                elif abs(trend_val - row_target) < 0.01:
-                                    cell_bg = 'background:#c8e6c9;'  # on target: light green
                                 else:
-                                    cell_bg = ''  # below target: white / no highlight
+                                    cell_bg = 'background:#c8e6c9;'  # at or under target: light green
                             except: pass
                         day_html += f'<td style="padding:4px 8px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} color:{cell_color}; white-space:nowrap;">{val}</td>'
                     day_html += '</tr>'
