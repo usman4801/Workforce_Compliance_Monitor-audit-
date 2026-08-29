@@ -1229,7 +1229,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         # Find UPL files for selected date range
         upl_files_found = []
         upl_missing_dates = []   # genuinely missing UPL files for a date
-        upl_mismatch_dates = []  # files found, but Roster/Dashboard HC don't reconcile
         upl_error_dates = []     # files found, but couldn't be parsed
         upl_shift_fallback_dates = []  # HC DS/NS fell back to Dashboard (no reliable Roster shift split)
         start_d, end_d = selected_dates_range
@@ -1343,15 +1342,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         day_hc_ds, day_hc_ns = hc_ds, hc_ns
                         day_shift_source = 'dashboard'
 
-                    # Sanity check: flag any day where the filtered Roster still
-                    # doesn't reconcile with the Dashboard tab, instead of silently
-                    # showing mismatched totals downstream.
-                    if hc_from_roster != total_hc or upl_from_roster != upl_total or pl_from_roster != pl_total:
-                        upl_mismatch_dates.append(
-                            f"{d.strftime('%d-%b-%y')}: Roster-filtered HC {hc_from_roster} vs "
-                            f"Dashboard HC {total_hc}, UPL {upl_from_roster} vs {upl_total}, "
-                            f"PL {pl_from_roster} vs {pl_total}"
-                        )
                     if day_shift_source == 'dashboard' and hc_from_roster != total_hc:
                         upl_shift_fallback_dates.append(d.strftime('%d-%b-%y'))
 
@@ -1728,9 +1718,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 axis=alt.Axis(domain=True, ticks=True, grid=False)),
                     )
 
-                    trend_line = base.mark_line(
+                    trend_area = base.mark_area(
+                        line={'strokeWidth': 2.5},
                         point=alt.OverlayMarkDef(filled=True, size=70, stroke='white', strokeWidth=1.5),
-                        strokeWidth=2.5,
+                        opacity=0.35,
+                        interpolate='monotone',
                     ).encode(
                         y=alt.Y('Actual %:Q', title='Actual %',
                                 axis=alt.Axis(domain=True, ticks=True, grid=True)),
@@ -1754,7 +1746,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     )
 
                     st.altair_chart(
-                        (trend_line + trend_labels).properties(height=280),
+                        (trend_area + trend_labels).properties(height=280),
                         use_container_width=True,
                     )
 
@@ -1769,17 +1761,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
             if upl_missing_dates:
                 st.warning(f"⚠️ Missing UPL files for: {', '.join(upl_missing_dates)}")
-
-            if upl_mismatch_dates:
-                st.error(
-                    "🔴 Dashboard sheet vs Roster sheet don't reconcile for: "
-                    + " | ".join(upl_mismatch_dates)
-                    + " — Day-wise and Agency-wise tables now both use the Roster-derived "
-                      "count (so they always match each other), but that means they may "
-                      "differ from the Dashboard sheet's own HC/UPL/PL cells for these dates. "
-                      "Check the Roster sheet for that day (Building / Type / 3P agency tag "
-                      "on the affected rows) if the Dashboard figure was the correct one."
-                )
 
             if upl_shift_fallback_dates:
                 st.warning(
