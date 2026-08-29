@@ -733,6 +733,35 @@ def find_column(df, keywords):
     return None
 
 
+def classify_shift_series(shift_series):
+    """
+    Classify a Series of raw shift values into 'DS' (day shift), 'NS' (night
+    shift), or '' (unrecognized). Covers common shift-code conventions:
+    DS/NS, D/N, Day/Night, Morning/Evening, 1st/2nd shift, AM/PM.
+    Returns a Series of the same length/index with 'DS'/'NS'/'' values.
+    """
+    day_tokens = ('ds', 'day', 'morning', '1st', 'am shift', 'general')
+    night_tokens = ('ns', 'night', 'evening', '2nd', 'pm shift', 'graveyard')
+
+    def _classify(v):
+        s = str(v).strip().lower()
+        if not s or s == 'nan':
+            return ''
+        if s in ('d', 'am'):
+            return 'DS'
+        if s in ('n', 'pm'):
+            return 'NS'
+        for tok in day_tokens:
+            if tok in s:
+                return 'DS'
+        for tok in night_tokens:
+            if tok in s:
+                return 'NS'
+        return ''
+
+    return shift_series.apply(_classify)
+
+
 def detect_status_from_row(row):
     possible_columns = [
         "status", "attendance status", "leave type", "leave",
@@ -1202,6 +1231,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         upl_missing_dates = []   # genuinely missing UPL files for a date
         upl_mismatch_dates = []  # files found, but Roster/Dashboard HC don't reconcile
         upl_error_dates = []     # files found, but couldn't be parsed
+        upl_shift_fallback_dates = []  # HC DS/NS fell back to Dashboard (no reliable Roster shift split)
         start_d, end_d = selected_dates_range
         upl_date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
 
@@ -1291,6 +1321,28 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     upl_from_roster = sl_from_roster + ab_count + abwi_count
                     hc_from_roster = len(scheduled)
 
+                    # Try to derive HC DS / HC NS from the Roster sheet itself, so
+                    # every number in Day-wise (and therefore Agency-wise) comes from
+                    # one single source. Only used when a shift column is present AND
+                    # every scheduled row for the day can be confidently classified —
+                    # otherwise we fall back to the Dashboard sheet's HC DS/HC NS cells
+                    # for that date and flag it, rather than silently guessing.
+                    shift_col = find_column(scheduled, ['shift', 'schedule', 'work shift', 'shift code'])
+                    hc_ds_roster = hc_ns_roster = None
+                    if shift_col:
+                        shift_class = classify_shift_series(scheduled[shift_col])
+                        unclassified = int((shift_class == '').sum())
+                        if unclassified == 0:
+                            hc_ds_roster = int((shift_class == 'DS').sum())
+                            hc_ns_roster = int((shift_class == 'NS').sum())
+
+                    if hc_ds_roster is not None and hc_ds_roster + hc_ns_roster == hc_from_roster:
+                        day_hc_ds, day_hc_ns = hc_ds_roster, hc_ns_roster
+                        day_shift_source = 'roster'
+                    else:
+                        day_hc_ds, day_hc_ns = hc_ds, hc_ns
+                        day_shift_source = 'dashboard'
+
                     # Sanity check: flag any day where the filtered Roster still
                     # doesn't reconcile with the Dashboard tab, instead of silently
                     # showing mismatched totals downstream.
@@ -1300,6 +1352,8 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                             f"Dashboard HC {total_hc}, UPL {upl_from_roster} vs {upl_total}, "
                             f"PL {pl_from_roster} vs {pl_total}"
                         )
+                    if day_shift_source == 'dashboard' and hc_from_roster != total_hc:
+                        upl_shift_fallback_dates.append(d.strftime('%d-%b-%y'))
 
                     # Collect roster for agency report
                     scheduled['_date'] = d.strftime('%d-%b-%y')
@@ -1318,8 +1372,8 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     day_wise_data.append({
                         'Date': d.strftime('%d-%b-%y'),
-                        'HC DS': hc_ds,
-                        'HC NS': hc_ns,
+                        'HC DS': day_hc_ds,
+                        'HC NS': day_hc_ns,
                         'Total HC': hc_from_roster,
                         'SL': sl_from_roster,
                         'AB': ab_count,
@@ -1725,6 +1779,16 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                       "differ from the Dashboard sheet's own HC/UPL/PL cells for these dates. "
                       "Check the Roster sheet for that day (Building / Type / 3P agency tag "
                       "on the affected rows) if the Dashboard figure was the correct one."
+                )
+
+            if upl_shift_fallback_dates:
+                st.warning(
+                    "⚠️ HC DS/HC NS still shown from the Dashboard sheet (not Roster) for: "
+                    + ', '.join(upl_shift_fallback_dates)
+                    + " — either no reliable shift column was found on the Roster sheet, or "
+                      "Roster's day/night split didn't add up to the reconciled Total HC for "
+                      "that date. So HC DS + HC NS may not exactly equal Total HC on these "
+                      "rows until the Roster sheet for that date is corrected."
                 )
 
             if upl_error_dates:
