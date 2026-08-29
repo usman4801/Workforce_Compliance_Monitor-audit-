@@ -295,6 +295,32 @@ def percentage(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
 
 
+def heat_color(value, vmin, vmax):
+    """Excel-style 3-stop heat scale: green (best/lowest) -> yellow (mid)
+    -> red (worst/highest), interpolated by where `value` sits between
+    `vmin` and `vmax`. Matches the look of the reference screenshot's
+    Trend columns (green/yellow/orange/red gradient)."""
+    if vmax == vmin:
+        return '#ffeb84'
+
+    ratio = (value - vmin) / (vmax - vmin)
+    ratio = max(0.0, min(1.0, ratio))
+
+    stops = [(0.0, (99, 190, 123)), (0.5, (255, 235, 132)), (1.0, (248, 105, 107))]
+
+    for i in range(len(stops) - 1):
+        r0, c0 = stops[i]
+        r1, c1 = stops[i + 1]
+        if r0 <= ratio <= r1:
+            local_ratio = (ratio - r0) / (r1 - r0) if r1 != r0 else 0
+            r = int(c0[0] + (c1[0] - c0[0]) * local_ratio)
+            g = int(c0[1] + (c1[1] - c0[1]) * local_ratio)
+            b = int(c0[2] + (c1[2] - c0[2]) * local_ratio)
+            return f'#{r:02x}{g:02x}{b:02x}'
+
+    return '#ffeb84'
+
+
 def safe_cell(df, row, col):
     """Safely read a cell from a DataFrame, returning None if out of range/blank."""
     try:
@@ -1408,6 +1434,8 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         'Trend ': f'{pl_trend:.2f}%',
                         '_UPLTargetNum': upl_target_val,
                         '_PLTargetNum': pl_target_val,
+                        '_UPLTrendNum': upl_trend,
+                        '_PLTrendNum': pl_trend,
                     })
                 except Exception:
                     upl_error_dates.append(d.strftime('%d-%b-%y'))
@@ -1462,6 +1490,14 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 row_upl_targets = list(day_df['_UPLTargetNum']) + [t_upl_target]
                 row_pl_targets = list(day_df['_PLTargetNum']) + [t_pl_target]
 
+                # Heat-scale range for the Trend columns: green = lowest trend in
+                # this table, red = highest, gradient in between (matches the
+                # reference screenshot). Excludes the Total row from the scale.
+                upl_trend_vals = day_df['_UPLTrendNum'].tolist()
+                pl_trend_vals = day_df['_PLTrendNum'].tolist()
+                upl_vmin, upl_vmax = (min(upl_trend_vals), max(upl_trend_vals)) if upl_trend_vals else (0, 0)
+                pl_vmin, pl_vmax = (min(pl_trend_vals), max(pl_trend_vals)) if pl_trend_vals else (0, 0)
+
                 # Build colored HTML table for Day wise
                 day_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
                 # Header
@@ -1483,24 +1519,12 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         if col == 'Trend' and not is_total:
                             try:
                                 trend_val = float(str(val).replace('%',''))
-                                row_target = row_upl_targets[row_idx]
-                                if trend_val <= row_target - 1.00:
-                                    cell_bg = 'background:#c8e6c9;'
-                                elif trend_val <= row_target:
-                                    cell_bg = 'background:#fff9c4;'
-                                else:
-                                    cell_bg = 'background:#ffcdd2;'
+                                cell_bg = f'background:{heat_color(trend_val, upl_vmin, upl_vmax)};'
                             except: pass
                         if col == 'Trend ' and not is_total:
                             try:
                                 trend_val = float(str(val).replace('%',''))
-                                row_target = row_pl_targets[row_idx]
-                                if trend_val <= row_target:
-                                    cell_bg = 'background:#c8e6c9;'
-                                elif trend_val <= row_target + 0.83:
-                                    cell_bg = 'background:#fff9c4;'
-                                else:
-                                    cell_bg = 'background:#ffcdd2;'
+                                cell_bg = f'background:{heat_color(trend_val, pl_vmin, pl_vmax)};'
                             except: pass
                         day_html += f'<td style="padding:4px 8px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} color:{cell_color}; white-space:nowrap;">{val}</td>'
                     day_html += '</tr>'
@@ -1537,9 +1561,19 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                             'Trend': f'{ag_upl_trend:.2f}%',
                             'Total PLs': ag_pl,
                             'PL Trend': f'{ag_pl_trend:.2f}%',
+                            '_UPLTrendNum': ag_upl_trend,
+                            '_PLTrendNum': ag_pl_trend,
                         })
 
                     agency_df_display = pd.DataFrame(agency_data)
+
+                    # Heat-scale range for the Agency-wise Trend columns, same
+                    # green->yellow->red gradient approach as Day-wise, excluding
+                    # the Total row (added below) from the scale.
+                    ag_upl_trend_vals = agency_df_display['_UPLTrendNum'].tolist()
+                    ag_pl_trend_vals = agency_df_display['_PLTrendNum'].tolist()
+                    ag_upl_vmin, ag_upl_vmax = (min(ag_upl_trend_vals), max(ag_upl_trend_vals)) if ag_upl_trend_vals else (0, 0)
+                    ag_pl_vmin, ag_pl_vmax = (min(ag_pl_trend_vals), max(ag_pl_trend_vals)) if ag_pl_trend_vals else (0, 0)
 
                     ag_t_hc = agency_df_display['Total HC'].sum()
                     ag_t_sl = agency_df_display['SL'].sum()
@@ -1587,16 +1621,12 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 if col == 'Trend' and not is_total:
                                     try:
                                         tv = float(str(val).replace('%',''))
-                                        if tv <= 3.00: cell_bg = 'background:#c8e6c9;'
-                                        elif tv <= 5.00: cell_bg = 'background:#fff9c4;'
-                                        else: cell_bg = 'background:#ffcdd2;'
+                                        cell_bg = f'background:{heat_color(tv, ag_upl_vmin, ag_upl_vmax)};'
                                     except: pass
                                 if col == 'PL Trend' and not is_total:
                                     try:
                                         tv = float(str(val).replace('%',''))
-                                        if tv <= 9.67: cell_bg = 'background:#c8e6c9;'
-                                        elif tv <= 11.00: cell_bg = 'background:#fff9c4;'
-                                        else: cell_bg = 'background:#ffcdd2;'
+                                        cell_bg = f'background:{heat_color(tv, ag_pl_vmin, ag_pl_vmax)};'
                                     except: pass
                                 ag_html += f'<td style="padding:4px 6px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} white-space:nowrap;">{val}</td>'
                             ag_html += '</tr>'
