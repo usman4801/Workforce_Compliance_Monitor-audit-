@@ -1519,7 +1519,11 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         if col == 'Trend' and not is_total:
                             try:
                                 trend_val = float(str(val).replace('%',''))
-                                cell_bg = f'background:{heat_color(trend_val, upl_vmin, upl_vmax)};'
+                                row_target = row_upl_targets[row_idx]
+                                if trend_val > row_target:
+                                    cell_bg = 'background:#ffcdd2;'  # above target: light red
+                                else:
+                                    cell_bg = 'background:#c8e6c9;'  # at or under target: light green
                             except: pass
                         if col == 'Trend ' and not is_total:
                             try:
@@ -1625,7 +1629,10 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 if col == 'Trend' and not is_total:
                                     try:
                                         tv = float(str(val).replace('%',''))
-                                        cell_bg = f'background:{heat_color(tv, ag_upl_vmin, ag_upl_vmax)};'
+                                        if tv > 3.50:
+                                            cell_bg = 'background:#ffcdd2;'  # above 3.50%: light red
+                                        else:
+                                            cell_bg = 'background:#c8e6c9;'  # at or below 3.50%: light green
                                     except: pass
                                 if col == 'PL Trend' and not is_total:
                                     try:
