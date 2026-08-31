@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # ==========================================================
-# GLOBAL CSS (Increased Tile Size)
+# GLOBAL CSS (Restored Feature Cards & Tile Styles)
 # ==========================================================
 st.markdown(
     """
@@ -115,7 +115,56 @@ st.markdown(
         object-fit:contain;
     }
 
-    /* Increased Tile Size & Spacing */
+    /* Feature Cards Styling Restored */
+    .feature-card {
+        padding:16px;
+        border-radius:14px;
+        height:115px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+        text-align:center;
+        box-shadow:0 4px 12px rgba(0,0,0,0.04);
+        border:1.5px solid;
+    }
+
+    .fc-blue {
+        background:#f0f6ff;
+        border-color:#d2e3fc;
+    }
+
+    .fc-orange {
+        background:#fefce8;
+        border-color:#fef08a;
+    }
+
+    .fc-green {
+        background:#f0fdf4;
+        border-color:#bbf7d0;
+    }
+
+    .fc-purple {
+        background:#faf5ff;
+        border-color:#f3e8ff;
+    }
+
+    .fc-title {
+        font-size:13.5px;
+        font-weight:800;
+        color:#1e1b4b;
+        margin-top:6px;
+        margin-bottom:3px;
+    }
+
+    .fc-text {
+        font-size:11px;
+        color:#475569;
+        line-height:1.2;
+        font-weight:500;
+    }
+
+    /* Increased Top Metric Cards Size */
     .metric-card {
         padding:22px 20px;
         border-radius:12px 12px 0 0;
@@ -183,11 +232,6 @@ st.markdown(
         font-weight:800;
         color:#111827;
         margin-bottom:12px;
-    }
-
-    .small-note {
-        color:#64748b;
-        font-size:11px;
     }
     </style>
     """,
@@ -909,7 +953,6 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
 # ==========================================================
 if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
-    # Added st.spinner so users see a loading status indicator while data is fetched/processed
     with st.spinner("🔄 Fetching and analyzing compliance data, please wait..."):
         final_df, missing_files = process_attendance_data(
             tuple(selected_dates_range),
@@ -1045,7 +1088,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         st.markdown("<div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
 
         with st.spinner("📊 Generating UPL Report breakdown..."):
-            # Call cached processing function
             (
                 day_wise_data,
                 all_roster_scheduled,
@@ -1535,7 +1577,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         )
 
 else:
-    # DEFAULT FEATURE CARDS
+    # DEFAULT FEATURE CARDS (Restored and Fully Styled)
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
