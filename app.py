@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # ==========================================================
-# GLOBAL CSS (Fixed Calendar Month Header & Metric Cards)
+# GLOBAL CSS (Forced Calendar Month & Enforced Larger Tiles)
 # ==========================================================
 st.markdown(
     """
@@ -109,22 +109,11 @@ st.markdown(
     }
 
     /* Force Calendar Popup Month/Year Header Visibility */
-    div[data-baseweb="popover"], div[data-baseweb="calendar"] {
+    div[data-baseweb="calendar"] * {
         color: #0f172a !important;
+    }
+    div[data-baseweb="calendar"] {
         background-color: #ffffff !important;
-    }
-    div[data-baseweb="calendar"] div, 
-    div[data-baseweb="calendar"] span, 
-    div[data-baseweb="calendar"] button {
-        color: #0f172a !important;
-    }
-    div[data-baseweb="calendar"] header {
-        background-color: #f8fafc !important;
-        border-bottom: 1px solid #e2e8f0 !important;
-    }
-    div[data-baseweb="calendar"] header button {
-        background-color: transparent !important;
-        color: #0f172a !important;
     }
 
     .branch-logo {
@@ -180,60 +169,6 @@ st.markdown(
         color:#475569;
         line-height:1.2;
         font-weight:500;
-    }
-
-    /* Enforced Larger Top Metric Cards Size */
-    div.metric-card {
-        padding:26px 20px !important;
-        border-radius:12px 12px 0 0 !important;
-        color:white !important;
-        font-family:sans-serif !important;
-        box-shadow:0 6px 16px rgba(0,0,0,0.1) !important;
-        cursor:pointer !important;
-        min-height: 140px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-    }
-
-    div.metric-card:hover {
-        transform:translateY(-3px);
-        box-shadow:0 10px 20px rgba(0,0,0,0.18);
-    }
-
-    .card-blue {
-        background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);
-    }
-
-    .card-red {
-        background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%);
-    }
-
-    .card-orange {
-        background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%);
-    }
-
-    .card-purple {
-        background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%);
-    }
-
-    .card-green {
-        background:linear-gradient(135deg,#10b981 0%,#047857 100%);
-    }
-
-    div.card-title {
-        font-size:15px !important;
-        font-weight:700 !important;
-        opacity:0.95 !important;
-        margin-bottom:8px !important;
-        text-transform:uppercase !important;
-        letter-spacing:0.6px !important;
-    }
-
-    div.card-value {
-        font-size:40px !important;
-        font-weight:900 !important;
-        line-height:1.1 !important;
     }
 
     .upl-section {
@@ -1017,15 +952,15 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
     if "selected_view" not in st.session_state:
         st.session_state.selected_view = "defaulters"
 
-    # TOP CARDS
+    # TOP CARDS (With inline styles to guarantee larger size)
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         st.markdown(
             f"""
-            <div class="metric-card card-purple" id="card_def">
-                <div class="card-title">⏰ Defaulter Hours</div>
-                <div class="card-value">{len(defaulters)}</div>
+            <div class="metric-card card-purple" id="card_def" style="padding:28px 20px !important; min-height:145px !important;">
+                <div class="card-title" style="font-size:15px !important; font-weight:700 !important;">⏰ Defaulter Hours</div>
+                <div class="card-value" style="font-size:42px !important; font-weight:900 !important;">{len(defaulters)}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1036,9 +971,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
     with c2:
         st.markdown(
             f"""
-            <div class="metric-card card-orange" id="card_mis">
-                <div class="card-title">⚠️ Mispunches</div>
-                <div class="card-value">{len(mispunches)}</div>
+            <div class="metric-card card-orange" id="card_mis" style="padding:28px 20px !important; min-height:145px !important;">
+                <div class="card-title" style="font-size:15px !important; font-weight:700 !important;">⚠️ Mispunches</div>
+                <div class="card-value" style="font-size:42px !important; font-weight:900 !important;">{len(mispunches)}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1049,9 +984,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
     with c3:
         st.markdown(
             f"""
-            <div class="metric-card card-red" id="card_rep_mis">
-                <div class="card-title">🔄 Repeated Mispunches</div>
-                <div class="card-value">{len(repeated_mispunches)}</div>
+            <div class="metric-card card-red" id="card_rep_mis" style="padding:28px 20px !important; min-height:145px !important;">
+                <div class="card-title" style="font-size:15px !important; font-weight:700 !important;">🔄 Repeated Mispunches</div>
+                <div class="card-value" style="font-size:42px !important; font-weight:900 !important;">{len(repeated_mispunches)}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1062,9 +997,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
     with c4:
         st.markdown(
             f"""
-            <div class="metric-card card-blue" id="card_upl">
-                <div class="card-title">📋 UPL Report</div>
-                <div class="card-value">{upl_tile_value}</div>
+            <div class="metric-card card-blue" id="card_upl" style="padding:28px 20px !important; min-height:145px !important;">
+                <div class="card-title" style="font-size:15px !important; font-weight:700 !important;">📋 UPL Report</div>
+                <div class="card-value" style="font-size:42px !important; font-weight:900 !important;">{upl_tile_value}</div>
             </div>
             """,
             unsafe_allow_html=True,
