@@ -797,7 +797,7 @@ roster_master = get_roster_master(roster_df)
 
 
 # ==========================================================
-# CACHED UPL PROCESSOR (FIX #1 & #2)
+# CACHED UPL PROCESSOR (FIXED PATH LOOKUP)
 # ==========================================================
 @st.cache_data(show_spinner=False)
 def process_upl_files(dates_tuple, warehouse, exclude_str):
@@ -822,16 +822,23 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
         master = master[~master["_Clean_ID"].isin(exclude_list)].copy()
 
     for d in date_list:
-        d_str = d.strftime("%Y-%m-%d")
-        possible_paths = get_possible_paths(d, warehouse)
-        file_path = next((p for p in possible_paths if os.path.exists(p)), None)
+        d_str_tag = d.strftime('%d%m%Y')
+        
+        # Robust path lookup handling both folder and standard file naming patterns
+        possible_upl_names = [
+            os.path.join(warehouse, f"UPL-{warehouse}-{d_str_tag}.xlsx"),
+            f"UPL-{warehouse}-{d_str_tag}.xlsx",
+            os.path.join(warehouse, f"UPL-{warehouse}-{d.strftime('%Y-%m-%d')}.xlsx"),
+            f"UPL-{warehouse}-{d.strftime('%Y-%m-%d')}.xlsx"
+        ]
+
+        file_path = next((p for p in possible_upl_names if os.path.exists(p)), None)
 
         if not file_path:
             upl_missing_dates.append(d.strftime("%d-%b-%y"))
             continue
 
         try:
-            # FIX #2: Open Excel file once using pd.ExcelFile to parse both sheets efficiently
             with pd.ExcelFile(file_path) as xl:
                 dash = xl.parse('Dashboard', dtype=str, header=None)
                 rdf = xl.parse('Roster', dtype=str, header=None)
@@ -975,10 +982,15 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         start_d_upl, end_d_upl = selected_dates_range
         for d_idx in range((end_d_upl - start_d_upl).days + 1):
             d_upl = start_d_upl + timedelta(days=d_idx)
-            upl_fname_base = f"UPL-{selected_warehouse}-{d_upl.strftime('%d%m%Y')}.xlsx"
-            upl_fname_folder = os.path.join(selected_warehouse, upl_fname_base)
-            upl_fname = upl_fname_folder if os.path.exists(upl_fname_folder) else upl_fname_base
-            if os.path.exists(upl_fname):
+            d_str_tag = d_upl.strftime('%d%m%Y')
+            possible_upl_names = [
+                os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_str_tag}.xlsx"),
+                f"UPL-{selected_warehouse}-{d_str_tag}.xlsx",
+                os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"),
+                f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"
+            ]
+            upl_fname = next((p for p in possible_upl_names if os.path.exists(p)), None)
+            if upl_fname:
                 with pd.ExcelFile(upl_fname) as xl:
                     dash_upl = xl.parse('Dashboard', dtype=str, header=None)
                 upl_tile_value += int(dash_upl.iloc[8, 6])
@@ -1075,7 +1087,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         st.markdown("<div class='upl-section'>", unsafe_allow_html=True)
         st.markdown("<div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
 
-        # Call the newly cached processing function (FIX #1)
+        # Call cached processing function
         (
             day_wise_data,
             all_roster_scheduled,
