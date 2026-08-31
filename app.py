@@ -17,13 +17,11 @@ os.chdir(APP_DIR)
 # ==========================================================
 import datetime as _dt
 
-WEEK_ANCHOR_DATE = _dt.date(2026, 8, 2)  # This date = start of Week 32
-WEEK_ANCHOR_NUM  = 32
+WEEK_ANCHOR_DATE = _dt.date(2026, 8, 2)
+WEEK_ANCHOR_NUM = 32
 
 def get_week(d):
-    """Return custom week number based on Sunday-to-Sunday calendar.
-    Aug 2–8 = Wk32, Aug 9–15 = Wk33, Aug 16–22 = Wk34, Aug 23–29 = Wk35
-    """
+    """Return custom week number based on Sunday-to-Sunday calendar."""
     if hasattr(d, 'date'):
         d = d.date()
     delta = (d - WEEK_ANCHOR_DATE).days
@@ -242,8 +240,9 @@ st.markdown(
 
 
 # ==========================================================
-# HELPERS
+# HELPERS (CACHED)
 # ==========================================================
+@st.cache_data(show_spinner=False)
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, "rb") as f:
@@ -295,34 +294,7 @@ def percentage(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
 
 
-def heat_color(value, vmin, vmax):
-    """Excel-style 3-stop heat scale: green (best/lowest) -> yellow (mid)
-    -> red (worst/highest), interpolated by where `value` sits between
-    `vmin` and `vmax`. Matches the look of the reference screenshot's
-    Trend columns (green/yellow/orange/red gradient)."""
-    if vmax == vmin:
-        return '#ffeb84'
-
-    ratio = (value - vmin) / (vmax - vmin)
-    ratio = max(0.0, min(1.0, ratio))
-
-    stops = [(0.0, (99, 190, 123)), (0.5, (255, 235, 132)), (1.0, (248, 105, 107))]
-
-    for i in range(len(stops) - 1):
-        r0, c0 = stops[i]
-        r1, c1 = stops[i + 1]
-        if r0 <= ratio <= r1:
-            local_ratio = (ratio - r0) / (r1 - r0) if r1 != r0 else 0
-            r = int(c0[0] + (c1[0] - c0[0]) * local_ratio)
-            g = int(c0[1] + (c1[1] - c0[1]) * local_ratio)
-            b = int(c0[2] + (c1[2] - c0[2]) * local_ratio)
-            return f'#{r:02x}{g:02x}{b:02x}'
-
-    return '#ffeb84'
-
-
 def safe_cell(df, row, col):
-    """Safely read a cell from a DataFrame, returning None if out of range/blank."""
     try:
         val = df.iloc[row, col]
         if pd.isna(val):
@@ -333,8 +305,6 @@ def safe_cell(df, row, col):
 
 
 def parse_target_pct(val, default):
-    """Parse a target percentage from a cell value like '3.50%', '3.50', or 3.5.
-    Falls back to `default` if the cell is missing, blank, or unparseable."""
     if val is None:
         return default, False
     try:
@@ -347,10 +317,6 @@ def parse_target_pct(val, default):
 
 
 def parse_roster_target_pct(val, default):
-    """Parse the PL Target from the Roster sheet's 'Target' cell (label in F1,
-    value in G1). Excel stores a percent-formatted cell as a raw fraction
-    (e.g. 7.56% is saved as 0.0756), so values under 1 are scaled up to a
-    percentage. Falls back to `default` if the cell is missing/unparseable."""
     if val is None:
         return default, False
     try:
@@ -469,7 +435,6 @@ exclude_ids_input = st.sidebar.text_area(
 @st.cache_data(show_spinner=False)
 def load_permanent_roster():
     roster = pd.DataFrame()
-
     possible_files = [
         os.path.join("AUH1", "HC.xlsx"),
         os.path.join("AUH1", "hc.xlsx"),
@@ -491,9 +456,6 @@ def load_permanent_roster():
         return roster
 
     roster.columns = [str(c).strip() for c in roster.columns]
-
-    norm_map = {normalize_col(c): c for c in roster.columns}
-
     id_col = None
 
     for c in roster.columns:
@@ -511,7 +473,6 @@ def load_permanent_roster():
         id_col = roster.columns[0]
 
     roster["_Clean_ID"] = roster[id_col].apply(clean_id)
-
     return roster
 
 
@@ -523,18 +484,14 @@ roster_df = load_permanent_roster()
 # ==========================================================
 def build_roster_hours_map(roster):
     result = {}
-
     if roster.empty:
         return result
 
     for _, row in roster.iterrows():
         cid = clean_id(row.get("_Clean_ID", ""))
-
         if not cid:
             continue
-
         row_text = " ".join(str(v).lower() for v in row.tolist())
-
         if (
             "7 hour" in row_text
             or "7 hr" in row_text
@@ -544,7 +501,6 @@ def build_roster_hours_map(roster):
             result[cid] = "7 Hours"
         else:
             result[cid] = "9 Hours"
-
     return result
 
 
@@ -569,7 +525,6 @@ def get_possible_paths(d, warehouse):
             f"{d_str}.xls",
             f"{d_str}.csv",
         ]
-
     if warehouse == "DXB5":
         return [
             os.path.join(folder, f"DXB5 {d_str}.xlsx.xlsx"),
@@ -581,7 +536,6 @@ def get_possible_paths(d, warehouse):
             f"DXB5 {d_str}.xlsx.xlsx",
             f"DXB5 {d_str}.xlsx",
         ]
-
     if warehouse == "DXB3":
         return [
             os.path.join(folder, f"DXB3 {d_str}.xlsx.xlsx"),
@@ -593,7 +547,6 @@ def get_possible_paths(d, warehouse):
             f"DXB3 {d_str}.xlsx.xlsx",
             f"DXB3 {d_str}.xlsx",
         ]
-
     return [
         os.path.join(folder, f"{d_str}.xlsx.xlsx"),
         os.path.join(folder, f"{d_str}.xlsx"),
@@ -602,9 +555,6 @@ def get_possible_paths(d, warehouse):
     ]
 
 
-# ==========================================================
-# READ DAILY FILE
-# ==========================================================
 def read_daily_file(path):
     try:
         if path.lower().endswith(".csv"):
@@ -619,21 +569,11 @@ def read_daily_file(path):
 # ==========================================================
 @st.cache_data(show_spinner=False)
 def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, roster_map):
-    manual_list = (
-        [clean_id(x) for x in manual_str.split(",")]
-        if manual_str
-        else []
-    )
-
-    exclude_list = (
-        [clean_id(x) for x in exclude_str.split(",")]
-        if exclude_str
-        else []
-    )
+    manual_list = [clean_id(x) for x in manual_str.split(",")] if manual_str else []
+    exclude_list = [clean_id(x) for x in exclude_str.split(",")] if exclude_str else []
 
     t_dfs = []
     missing_files = []
-
     start_d, end_d = dates_tuple
 
     date_list = [
@@ -644,18 +584,13 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
     for d in date_list:
         d_str = d.strftime("%Y-%m-%d")
         possible_paths = get_possible_paths(d, warehouse)
-
-        f_path = next(
-            (p for p in possible_paths if os.path.exists(p)),
-            None,
-        )
+        f_path = next((p for p in possible_paths if os.path.exists(p)), None)
 
         if not f_path:
             missing_files.append(d_str)
             continue
 
         tdf = read_daily_file(f_path)
-
         if tdf.empty:
             missing_files.append(d_str)
             continue
@@ -711,7 +646,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
 
         if total_punches == 0:
             return pd.Series([0, target, "00:00", "OK", "Absent", "Clean"])
-
         if total_punches == 1:
             return pd.Series([1, target, "N/A", "Error", "Single Scan Only", "Mispunch"])
 
@@ -760,7 +694,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
     })
 
     result = pd.concat([basic_info, analyzed, p_clean], axis=1)
-
     return result, missing_files
 
 
@@ -779,12 +712,6 @@ def find_column(df, keywords):
 
 
 def classify_shift_series(shift_series):
-    """
-    Classify a Series of raw shift values into 'DS' (day shift), 'NS' (night
-    shift), or '' (unrecognized). Covers common shift-code conventions:
-    DS/NS, D/N, Day/Night, Morning/Evening, 1st/2nd shift, AM/PM.
-    Returns a Series of the same length/index with 'DS'/'NS'/'' values.
-    """
     day_tokens = ('ds', 'day', 'morning', '1st', 'am shift', 'general')
     night_tokens = ('ns', 'night', 'evening', '2nd', 'pm shift', 'graveyard')
 
@@ -839,7 +766,6 @@ def get_roster_master(roster):
         return pd.DataFrame()
 
     result = roster.copy()
-
     id_col = None
     for col in result.columns:
         nc = normalize_col(col)
@@ -856,22 +782,13 @@ def get_roster_master(roster):
     result["_Clean_ID"] = result[id_col].apply(clean_id)
 
     agency_col = find_column(result, ["agency", "vendor", "contractor", "supplier"])
-    if agency_col:
-        result["_Agency"] = result[agency_col].fillna("").astype(str).str.strip()
-    else:
-        result["_Agency"] = ""
+    result["_Agency"] = result[agency_col].fillna("").astype(str).str.strip() if agency_col else ""
 
     shift_col = find_column(result, ["shift", "schedule", "work shift", "shift code"])
-    if shift_col:
-        result["_Shift"] = result[shift_col].fillna("").astype(str).str.strip()
-    else:
-        result["_Shift"] = ""
+    result["_Shift"] = result[shift_col].fillna("").astype(str).str.strip() if shift_col else ""
 
     status_col = find_column(result, ["status", "attendance status", "leave type", "leave status", "absence type", "attendance"])
-    if status_col:
-        result["_Status"] = result[status_col].fillna("").astype(str).str.strip()
-    else:
-        result["_Status"] = ""
+    result["_Status"] = result[status_col].fillna("").astype(str).str.strip() if status_col else ""
 
     return result
 
@@ -880,260 +797,149 @@ roster_master = get_roster_master(roster_df)
 
 
 # ==========================================================
-# UPL PROCESSOR
+# CACHED UPL PROCESSOR (FIX #1 & #2)
 # ==========================================================
 @st.cache_data(show_spinner=False)
-def process_upl_report(dates_tuple, warehouse, exclude_str):
+def process_upl_files(dates_tuple, warehouse, exclude_str):
     start_d, end_d = dates_tuple
-
-    exclude_list = (
-        [clean_id(x) for x in exclude_str.split(",") if str(x).strip()]
-        if exclude_str
-        else []
-    )
+    exclude_list = [clean_id(x) for x in exclude_str.split(",") if str(x).strip()] if exclude_str else []
 
     date_list = [
         start_d + timedelta(days=i)
         for i in range((end_d - start_d).days + 1)
     ]
 
-    daily_summary = []
-    daily_employee_rows = []
-    missing_files = []
+    upl_files_found = []
+    upl_missing_dates = []
+    upl_error_dates = []
+    upl_shift_fallback_dates = []
+    day_wise_data = []
+    all_roster_scheduled = []
+    target_fallback_used = False
 
     master = roster_master.copy()
-    if not master.empty:
-        if exclude_list:
-            master = master[~master["_Clean_ID"].isin(exclude_list)].copy()
+    if not master.empty and exclude_list:
+        master = master[~master["_Clean_ID"].isin(exclude_list)].copy()
 
     for d in date_list:
         d_str = d.strftime("%Y-%m-%d")
         possible_paths = get_possible_paths(d, warehouse)
-
-        file_path = next(
-            (p for p in possible_paths if os.path.exists(p)),
-            None,
-        )
+        file_path = next((p for p in possible_paths if os.path.exists(p)), None)
 
         if not file_path:
-            missing_files.append(d_str)
+            upl_missing_dates.append(d.strftime("%d-%b-%y"))
             continue
 
-        attendance = read_daily_file(file_path)
+        try:
+            # FIX #2: Open Excel file once using pd.ExcelFile to parse both sheets efficiently
+            with pd.ExcelFile(file_path) as xl:
+                dash = xl.parse('Dashboard', dtype=str, header=None)
+                rdf = xl.parse('Roster', dtype=str, header=None)
 
-        if attendance.empty:
-            missing_files.append(d_str)
-            continue
+            hc_ds = int(dash.iloc[5, 3])
+            hc_ns = int(dash.iloc[7, 3])
+            total_hc = int(dash.iloc[8, 3])
+            sl = int(dash.iloc[27, 7])
+            ab_abwi = int(dash.iloc[27, 8])
+            upl_total = int(dash.iloc[8, 6])
+            pl_total = int(dash.iloc[8, 4])
 
-        attendance.columns = [str(c).strip() for c in attendance.columns]
+            upl_target_val, upl_target_found = parse_target_pct(safe_cell(dash, 2, 13), 3.50)
+            pl_target_val, pl_target_found = parse_target_pct(safe_cell(dash, 2, 14), 9.67)
 
-        id_col = attendance.columns[0]
-        name_col = attendance.columns[1]
+            roster_pl_target_val, roster_pl_target_found = parse_roster_target_pct(
+                safe_cell(rdf, 0, 6), pl_target_val
+            )
+            if roster_pl_target_found:
+                pl_target_val = roster_pl_target_val
+                pl_target_found = True
 
-        attendance["_Clean_ID"] = attendance[id_col].apply(clean_id)
+            if not upl_target_found or not pl_target_found:
+                target_fallback_used = True
 
-        if exclude_list:
-            attendance = attendance[~attendance["_Clean_ID"].isin(exclude_list)].copy()
+            roster = rdf.iloc[6:].copy()
+            roster.columns = [str(c).strip() for c in rdf.iloc[5].tolist()]
+            roster['_Clean_ID'] = roster['Psoft No'].apply(clean_id)
 
-        ignore = ["id", "name", "employee", "psoft", "building", "country"]
-        punch_cols = [
-            c for c in attendance.columns
-            if not any(x in normalize_col(c) for x in ignore)
-            and normalize_col(c) not in ["date", "clean id"]
-        ]
+            if 'Building' in roster.columns:
+                roster = roster[roster['Building'] == warehouse]
+            if exclude_list:
+                roster = roster[~roster['_Clean_ID'].isin(exclude_list)]
+            if 'Type' in roster.columns:
+                roster = roster[roster['Type'] == 'Direct']
+            if '3P' in roster.columns:
+                roster['3P'] = roster['3P'].replace('QuessCorp', 'Quesscorp')
 
-        attendance_ids = set(attendance["_Clean_ID"])
+            scheduled = roster[
+                (roster['Attendance'] != 'OFF')
+                & (roster['Attendance'].notna())
+                & (roster['Attendance'].astype(str).str.strip() != '')
+            ].copy()
 
-        if not master.empty:
-            day_df = master[["_Clean_ID", "_Agency", "_Shift", "_Status"]].copy()
-            day_df = day_df.drop_duplicates("_Clean_ID")
-        else:
-            day_df = pd.DataFrame({
-                "_Clean_ID": list(attendance_ids),
-                "_Agency": "",
-                "_Shift": "",
-                "_Status": "",
-            })
+            abwi_count = len(scheduled[scheduled['Attendance'] == 'ABWI'])
+            ab_count = len(scheduled[scheduled['Attendance'] == 'AB'])
+            sl_from_roster = len(scheduled[scheduled['Attendance'] == 'SL'])
+            pl_from_roster = len(scheduled[scheduled['Attendance'] == 'PL'])
+            upl_from_roster = sl_from_roster + ab_count + abwi_count
+            hc_from_roster = len(scheduled)
 
-        att_small = attendance.copy()
-        keep_cols = ["_Clean_ID", id_col, name_col] + punch_cols
-        keep_cols = list(dict.fromkeys(keep_cols))
-        att_small = att_small[[c for c in keep_cols if c in att_small.columns]]
+            shift_col = find_column(scheduled, ['shift', 'schedule', 'work shift', 'shift code'])
+            hc_ds_roster = hc_ns_roster = None
+            if shift_col:
+                shift_class = classify_shift_series(scheduled[shift_col])
+                unclassified = int((shift_class == '').sum())
+                if unclassified == 0:
+                    hc_ds_roster = int((shift_class == 'DS').sum())
+                    hc_ns_roster = int((shift_class == 'NS').sum())
 
-        day_df = day_df.merge(att_small, on="_Clean_ID", how="left")
-
-        result_rows = []
-
-        for _, row in day_df.iterrows():
-            emp_id = clean_id(row.get("_Clean_ID", ""))
-            name = str(row.get(name_col, "")).strip()
-            agency = str(row.get("_Agency", "")).strip()
-            shift = str(row.get("_Shift", "")).strip()
-            master_status = str(row.get("_Status", "")).strip()
-
-            punches = []
-            for c in punch_cols:
-                p = parse_time(row.get(c))
-                if p:
-                    punches.append(p)
-
-            punch_count = len(punches)
-
-            explicit_status = detect_status_from_row(row)
-            if not explicit_status:
-                explicit_status = master_status.upper()
-
-            status_upper = explicit_status.strip().upper()
-
-            if status_upper in ["PL", "PLANNED LEAVE", "ANNUAL LEAVE", "VACATION"]:
-                category = "PL"
-            elif status_upper in ["SL", "SICK LEAVE"]:
-                category = "SL"
-            elif status_upper in ["ABWI", "ABSENT WITHOUT INTIMATION"]:
-                category = "ABWI"
-            elif status_upper in ["AB", "ABS", "ABSENT"]:
-                category = "AB"
-            elif punch_count > 0:
-                category = "Present"
+            if hc_ds_roster is not None and hc_ds_roster + hc_ns_roster == hc_from_roster:
+                day_hc_ds, day_hc_ns = hc_ds_roster, hc_ns_roster
+                day_shift_source = 'roster'
             else:
-                category = "AB"
+                day_hc_ds, day_hc_ns = hc_ds, hc_ns
+                day_shift_source = 'dashboard'
 
-            result_rows.append({
-                "Date": d_str,
-                "P.Soft ID": emp_id,
-                "Employee Name": name,
-                "Agency": agency,
-                "Shift": shift,
-                "Status Source": explicit_status,
-                "Punches": punch_count,
-                "UPL Category": category,
+            if day_shift_source == 'dashboard' and hc_from_roster != total_hc:
+                upl_shift_fallback_dates.append(d.strftime('%d-%b-%y'))
+
+            scheduled['_date'] = d.strftime('%d-%b-%y')
+            all_roster_scheduled.append(scheduled)
+
+            upl_trend = round((upl_from_roster / hc_from_roster) * 100, 2) if hc_from_roster > 0 else 0
+            pl_trend = round((pl_from_roster / hc_from_roster) * 100, 2) if hc_from_roster > 0 else 0
+
+            day_wise_data.append({
+                'Date': d.strftime('%d-%b-%y'),
+                'HC DS': day_hc_ds,
+                'HC NS': day_hc_ns,
+                'Total HC': hc_from_roster,
+                'SL': sl_from_roster,
+                'AB': ab_count,
+                'ABWI': abwi_count,
+                'Total UPLs': upl_from_roster,
+                'Target': f'{upl_target_val:.2f}%',
+                'Trend': f'{upl_trend:.2f}%',
+                'Total PLs': pl_from_roster,
+                'Target ': f'{pl_target_val:.2f}%',
+                'Trend ': f'{pl_trend:.2f}%',
+                '_UPLTargetNum': upl_target_val,
+                '_PLTargetNum': pl_target_val,
+                '_UPLTrendNum': upl_trend,
+                '_PLTrendNum': pl_trend,
             })
+            upl_files_found.append((d, file_path))
+        except Exception:
+            upl_error_dates.append(d.strftime('%d-%b-%y'))
 
-        employee_day = pd.DataFrame(result_rows)
-
-        if employee_day.empty:
-            continue
-
-        daily_employee_rows.append(employee_day)
-
-        total_hc = len(employee_day)
-        sl = int((employee_day["UPL Category"] == "SL").sum())
-        ab = int((employee_day["UPL Category"] == "AB").sum())
-        abwi = int((employee_day["UPL Category"] == "ABWI").sum())
-        total_upl = sl + ab + abwi
-        total_pl = int((employee_day["UPL Category"] == "PL").sum())
-
-        shift_text = employee_day["Shift"].fillna("").astype(str).str.upper()
-        hc_ns = int(shift_text.str.contains("NS|NIGHT|N", regex=True).sum())
-        hc_ds = total_hc - hc_ns
-
-        daily_summary.append({
-            "Date": d.strftime("%d-%b-%y"),
-            "HC DS": hc_ds,
-            "HC NS": hc_ns,
-            "Total HC": total_hc,
-            "SL": sl,
-            "AB": ab,
-            "ABWI": abwi,
-            "Total UPLs": total_upl,
-            "UPL Target": 3.50,
-            "UPL Trend": percentage(total_upl, total_hc),
-            "Total PLs": total_pl,
-            "PL Target": 9.67,
-            "PL Trend": percentage(total_pl, total_hc),
-        })
-
-    daily_df = pd.DataFrame(daily_summary)
-
-    employee_df = (
-        pd.concat(daily_employee_rows, ignore_index=True)
-        if daily_employee_rows
-        else pd.DataFrame()
+    return (
+        day_wise_data,
+        all_roster_scheduled,
+        upl_files_found,
+        upl_missing_dates,
+        upl_error_dates,
+        upl_shift_fallback_dates,
+        target_fallback_used
     )
-
-    if not daily_df.empty:
-        total_hc = int(daily_df["Total HC"].sum())
-        total_sl = int(daily_df["SL"].sum())
-        total_ab = int(daily_df["AB"].sum())
-        total_abwi = int(daily_df["ABWI"].sum())
-        total_upl = int(daily_df["Total UPLs"].sum())
-        total_pl = int(daily_df["Total PLs"].sum())
-
-        total_row = {
-            "Date": "Total",
-            "HC DS": int(daily_df["HC DS"].sum()),
-            "HC NS": int(daily_df["HC NS"].sum()),
-            "Total HC": total_hc,
-            "SL": total_sl,
-            "AB": total_ab,
-            "ABWI": total_abwi,
-            "Total UPLs": total_upl,
-            "UPL Target": 3.50,
-            "UPL Trend": percentage(total_upl, total_hc),
-            "Total PLs": total_pl,
-            "PL Target": 9.67,
-            "PL Trend": percentage(total_pl, total_hc),
-        }
-
-        daily_df = pd.concat(
-            [daily_df, pd.DataFrame([total_row])],
-            ignore_index=True,
-        )
-
-    return daily_df, employee_df, missing_files
-
-
-# ==========================================================
-# AGENCY REPORT
-# ==========================================================
-def build_agency_report(employee_df):
-    if employee_df.empty:
-        return pd.DataFrame()
-
-    data = employee_df.copy()
-    data["Agency"] = data["Agency"].replace(["", "nan", "None"], "Unknown").fillna("Unknown")
-
-    grouped = (
-        data.groupby("Agency", dropna=False)
-        .agg(
-            HC=("P.Soft ID", "nunique"),
-            UPL=("UPL Category", lambda x: int(x.isin(["SL", "AB", "ABWI"]).sum())),
-            PL=("UPL Category", lambda x: int((x == "PL").sum())),
-            SL=("UPL Category", lambda x: int((x == "SL").sum())),
-            ABWI=("UPL Category", lambda x: int((x == "ABWI").sum())),
-            AB=("UPL Category", lambda x: int((x == "AB").sum())),
-        )
-        .reset_index()
-    )
-
-    grouped["UPL Trend"] = grouped.apply(lambda r: percentage(r["UPL"], r["HC"]), axis=1)
-    grouped["PL Trend"] = grouped.apply(lambda r: percentage(r["PL"], r["HC"]), axis=1)
-
-    grouped = grouped[["Agency", "HC", "SL", "ABWI", "AB", "UPL", "UPL Trend", "PL", "PL Trend"]]
-
-    return grouped.sort_values("Agency").reset_index(drop=True)
-
-
-# ==========================================================
-# WEEKLY SUMMARY
-# ==========================================================
-def build_weekly_summary(daily_df):
-    if daily_df.empty:
-        return pd.DataFrame()
-
-    actual = daily_df[daily_df["Date"] != "Total"].copy()
-
-    if actual.empty:
-        return pd.DataFrame()
-
-    total_hc = actual["Total HC"].sum()
-    total_upl = actual["Total UPLs"].sum()
-    total_pl = actual["Total PLs"].sum()
-
-    return pd.DataFrame([
-        {"Metric": "Unplanned Leave", "Target": 3.50, "Actual": percentage(total_upl, total_hc)},
-        {"Metric": "Planned Leave", "Target": 9.67, "Actual": percentage(total_pl, total_hc)},
-    ])
 
 
 # ==========================================================
@@ -1146,27 +952,24 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         selected_warehouse,
         manual_7_ids,
         exclude_ids_input,
-        roster_hours_map,
+        tuple(sorted(roster_hours_map.items())),
     )
 
-    upl_missing = []
+    mispunches = pd.DataFrame()
+    defaulters = pd.DataFrame()
+    repeated_mispunches = pd.DataFrame()
 
     if not final_df.empty:
         mispunches = final_df[final_df["Issue Type"] == "Mispunch"].copy()
         defaulters = final_df[final_df["Issue Type"] == "Defaulter Hours"].copy()
 
-        repeated_mispunches = pd.DataFrame()
         if not mispunches.empty:
             mis_counts = mispunches["P.Soft ID"].value_counts()
             repeated_mispunches = mispunches[
                 mispunches["P.Soft ID"].isin(mis_counts[mis_counts > 1].index)
             ]
-    else:
-        mispunches = pd.DataFrame()
-        defaulters = pd.DataFrame()
-        repeated_mispunches = pd.DataFrame()
 
-    # Calculate UPL tile value
+    # Calculate UPL tile value efficiently
     upl_tile_value = 0
     try:
         start_d_upl, end_d_upl = selected_dates_range
@@ -1176,7 +979,8 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
             upl_fname_folder = os.path.join(selected_warehouse, upl_fname_base)
             upl_fname = upl_fname_folder if os.path.exists(upl_fname_folder) else upl_fname_base
             if os.path.exists(upl_fname):
-                dash_upl = pd.read_excel(upl_fname, sheet_name='Dashboard', dtype=str, header=None)
+                with pd.ExcelFile(upl_fname) as xl:
+                    dash_upl = xl.parse('Dashboard', dtype=str, header=None)
                 upl_tile_value += int(dash_upl.iloc[8, 6])
     except Exception:
         upl_tile_value = "—"
@@ -1271,179 +1075,23 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         st.markdown("<div class='upl-section'>", unsafe_allow_html=True)
         st.markdown("<div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
 
-        # Find UPL files for selected date range
-        upl_files_found = []
-        upl_missing_dates = []   # genuinely missing UPL files for a date
-        upl_error_dates = []     # files found, but couldn't be parsed
-        upl_shift_fallback_dates = []  # HC DS/NS fell back to Dashboard (no reliable Roster shift split)
-        start_d, end_d = selected_dates_range
-        upl_date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
-
-        for d in upl_date_list:
-            fname_base = f"UPL-{selected_warehouse}-{d.strftime('%d%m%Y')}.xlsx"
-            fname_folder = os.path.join(selected_warehouse, fname_base)
-            if os.path.exists(fname_folder):
-                upl_files_found.append((d, fname_folder))
-            elif os.path.exists(fname_base):
-                upl_files_found.append((d, fname_base))
-            else:
-                upl_missing_dates.append(d.strftime("%d-%b-%y"))
+        # Call the newly cached processing function (FIX #1)
+        (
+            day_wise_data,
+            all_roster_scheduled,
+            upl_files_found,
+            upl_missing_dates,
+            upl_error_dates,
+            upl_shift_fallback_dates,
+            target_fallback_used
+        ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input)
 
         if not upl_files_found:
             st.warning("⚠️ No UPL files found for selected dates. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
         else:
-            # Process Day wise from Dashboard sheet
-            day_wise_data = []
-            all_roster_scheduled = []
-            target_fallback_used = False
-
-            # Same exclusion list used everywhere else in the app, applied here too
-            upl_exclude_list = (
-                [clean_id(x) for x in exclude_ids_input.split(",") if str(x).strip()]
-                if exclude_ids_input
-                else []
-            )
-
-            for d, fname in upl_files_found:
-                try:
-                    dash = pd.read_excel(fname, sheet_name='Dashboard', dtype=str, header=None)
-                    hc_ds = int(dash.iloc[5, 3])
-                    hc_ns = int(dash.iloc[7, 3])
-                    total_hc = int(dash.iloc[8, 3])
-                    sl = int(dash.iloc[27, 7])
-                    ab_abwi = int(dash.iloc[27, 8])
-                    upl_total = int(dash.iloc[8, 6])
-                    pl_total = int(dash.iloc[8, 4])
-
-                    # Weekly target, read from the Dashboard sheet: put "UPL Target"
-                    # and "PL Target" labels in cells N2/O2 (row idx 1, col idx 13/14)
-                    # and the numeric % values right below in N3/O3 (row idx 2, col idx 13/14).
-                    # (Cols H:M on rows 2-3 are already merged for the existing header
-                    # block, so N/O — the next free unmerged columns — are used instead.)
-                    # Falls back to 3.50% / 9.67% if those cells are blank/missing,
-                    # so older files without the new column still work.
-                    upl_target_val, upl_target_found = parse_target_pct(safe_cell(dash, 2, 13), 3.50)
-                    pl_target_val, pl_target_found = parse_target_pct(safe_cell(dash, 2, 14), 9.67)
-
-                    # Roster sheet: mirror the SAME filters the Dashboard tab applies,
-                    # so the Agency-wise table (built from this "scheduled" frame)
-                    # always reconciles with the Day-wise table above.
-                    #   1) Building must match the selected site (Roster mixes AUH1/AUH3/DAD1 etc.)
-                    #   2) Drop IDs on the sidebar "IDs to Ignore" list
-                    #   3) Type == 'Direct' only (Dashboard excludes 'Support' staff)
-                    #   4) Normalize agency name casing (e.g. 'QuessCorp' -> 'Quesscorp')
-                    rdf = pd.read_excel(fname, sheet_name='Roster', dtype=str, header=None)
-
-                    # PL Target override: if the Roster sheet has a 'Target' cell
-                    # (label in F1 / row idx 0, col idx 5; value in G1 / row idx 0,
-                    # col idx 6), use it as this day's PL Target instead of the
-                    # Dashboard sheet's O3 value / the 9.67% default.
-                    roster_pl_target_val, roster_pl_target_found = parse_roster_target_pct(
-                        safe_cell(rdf, 0, 6), pl_target_val
-                    )
-                    if roster_pl_target_found:
-                        pl_target_val = roster_pl_target_val
-                        pl_target_found = True
-
-                    if not upl_target_found or not pl_target_found:
-                        target_fallback_used = True
-
-                    roster = rdf.iloc[6:].copy()
-                    roster.columns = [str(c).strip() for c in rdf.iloc[5].tolist()]
-
-                    roster['_Clean_ID'] = roster['Psoft No'].apply(clean_id)
-
-                    if 'Building' in roster.columns:
-                        roster = roster[roster['Building'] == selected_warehouse]
-
-                    if upl_exclude_list:
-                        roster = roster[~roster['_Clean_ID'].isin(upl_exclude_list)]
-
-                    if 'Type' in roster.columns:
-                        roster = roster[roster['Type'] == 'Direct']
-
-                    if '3P' in roster.columns:
-                        roster['3P'] = roster['3P'].replace('QuessCorp', 'Quesscorp')
-
-                    scheduled = roster[
-                        (roster['Attendance'] != 'OFF')
-                        & (roster['Attendance'].notna())
-                        & (roster['Attendance'].astype(str).str.strip() != '')
-                    ].copy()
-
-                    abwi_count = len(scheduled[scheduled['Attendance'] == 'ABWI'])
-                    ab_count = len(scheduled[scheduled['Attendance'] == 'AB'])
-                    sl_from_roster = len(scheduled[scheduled['Attendance'] == 'SL'])
-                    pl_from_roster = len(scheduled[scheduled['Attendance'] == 'PL'])
-                    upl_from_roster = sl_from_roster + ab_count + abwi_count
-                    hc_from_roster = len(scheduled)
-
-                    # Try to derive HC DS / HC NS from the Roster sheet itself, so
-                    # every number in Day-wise (and therefore Agency-wise) comes from
-                    # one single source. Only used when a shift column is present AND
-                    # every scheduled row for the day can be confidently classified —
-                    # otherwise we fall back to the Dashboard sheet's HC DS/HC NS cells
-                    # for that date and flag it, rather than silently guessing.
-                    shift_col = find_column(scheduled, ['shift', 'schedule', 'work shift', 'shift code'])
-                    hc_ds_roster = hc_ns_roster = None
-                    if shift_col:
-                        shift_class = classify_shift_series(scheduled[shift_col])
-                        unclassified = int((shift_class == '').sum())
-                        if unclassified == 0:
-                            hc_ds_roster = int((shift_class == 'DS').sum())
-                            hc_ns_roster = int((shift_class == 'NS').sum())
-
-                    if hc_ds_roster is not None and hc_ds_roster + hc_ns_roster == hc_from_roster:
-                        day_hc_ds, day_hc_ns = hc_ds_roster, hc_ns_roster
-                        day_shift_source = 'roster'
-                    else:
-                        day_hc_ds, day_hc_ns = hc_ds, hc_ns
-                        day_shift_source = 'dashboard'
-
-                    if day_shift_source == 'dashboard' and hc_from_roster != total_hc:
-                        upl_shift_fallback_dates.append(d.strftime('%d-%b-%y'))
-
-                    # Collect roster for agency report
-                    scheduled['_date'] = d.strftime('%d-%b-%y')
-                    all_roster_scheduled.append(scheduled)
-
-                    # Day-wise now uses the SAME Roster-derived counts as Agency-wise
-                    # (hc_from_roster / sl_from_roster / upl_from_roster / pl_from_roster)
-                    # instead of the separate Dashboard-sheet cells, so the two tables
-                    # always add up to the same Total HC / UPLs / PLs by construction.
-                    # HC DS / HC NS stay Dashboard-sourced below — Roster has no shift
-                    # column to split them — so if HC DS + HC NS no longer equals the
-                    # new Total HC for a date, that gap is the same mismatch already
-                    # called out in the red banner further down, for that date.
-                    upl_trend = round((upl_from_roster / hc_from_roster) * 100, 2) if hc_from_roster > 0 else 0
-                    pl_trend = round((pl_from_roster / hc_from_roster) * 100, 2) if hc_from_roster > 0 else 0
-
-                    day_wise_data.append({
-                        'Date': d.strftime('%d-%b-%y'),
-                        'HC DS': day_hc_ds,
-                        'HC NS': day_hc_ns,
-                        'Total HC': hc_from_roster,
-                        'SL': sl_from_roster,
-                        'AB': ab_count,
-                        'ABWI': abwi_count,
-                        'Total UPLs': upl_from_roster,
-                        'Target': f'{upl_target_val:.2f}%',
-                        'Trend': f'{upl_trend:.2f}%',
-                        'Total PLs': pl_from_roster,
-                        'Target ': f'{pl_target_val:.2f}%',
-                        'Trend ': f'{pl_trend:.2f}%',
-                        '_UPLTargetNum': upl_target_val,
-                        '_PLTargetNum': pl_target_val,
-                        '_UPLTrendNum': upl_trend,
-                        '_PLTrendNum': pl_trend,
-                    })
-                except Exception:
-                    upl_error_dates.append(d.strftime('%d-%b-%y'))
-
             if day_wise_data:
                 day_df = pd.DataFrame(day_wise_data)
 
-                # Calculate totals
                 t_hc_ds = day_df['HC DS'].sum()
                 t_hc_ns = day_df['HC NS'].sum()
                 t_hc = day_df['Total HC'].sum()
@@ -1455,15 +1103,12 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 t_upl_trend = round((t_upl / t_hc) * 100, 2) if t_hc > 0 else 0
                 t_pl_trend = round((t_pl / t_hc) * 100, 2) if t_hc > 0 else 0
 
-                # HC-weighted average target across the selected days (handles a
-                # date range that spans more than one week with different targets).
                 t_upl_target = round((day_df['_UPLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 3.50
                 t_pl_target = round((day_df['_PLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 9.67
 
-                # Week number from selected dates (ISO week + 1 to match your system)
                 week_no = get_week(upl_files_found[0][0])
 
-                # ===== BOX 1: DAY WISE (full width, colored HTML table) =====
+                # ===== BOX 1: DAY WISE =====
                 st.markdown("**Day wise:-**")
 
                 display_day = day_df[['Date','HC DS','HC NS','Total HC','SL','AB','ABWI','Total UPLs','Target','Trend','Total PLs','Target ','Trend ']].copy()
@@ -1484,29 +1129,16 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 }])
                 display_day = pd.concat([display_day, total_row_df], ignore_index=True)
 
-                # Per-row numeric targets, in the same row order as display_day,
-                # used below to color Trend cells relative to each row's own target
-                # instead of a single hardcoded threshold.
                 row_upl_targets = list(day_df['_UPLTargetNum']) + [t_upl_target]
                 row_pl_targets = list(day_df['_PLTargetNum']) + [t_pl_target]
 
-                # Heat-scale range for the Trend columns: green = lowest trend in
-                # this table, red = highest, gradient in between (matches the
-                # reference screenshot). Excludes the Total row from the scale.
-                upl_trend_vals = day_df['_UPLTrendNum'].tolist()
-                pl_trend_vals = day_df['_PLTrendNum'].tolist()
-                upl_vmin, upl_vmax = (min(upl_trend_vals), max(upl_trend_vals)) if upl_trend_vals else (0, 0)
-                pl_vmin, pl_vmax = (min(pl_trend_vals), max(pl_trend_vals)) if pl_trend_vals else (0, 0)
-
-                # Build colored HTML table for Day wise
                 day_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
-                # Header
                 day_html += '<tr>'
                 hdr_colors = ['#1a237e','#1a237e','#1a237e','#0d47a1','#e65100','#e65100','#e65100','#b71c1c','#4a148c','#2e7d32','#1565c0','#4a148c','#2e7d32']
                 for idx_h, col in enumerate(display_day.columns):
                     day_html += f'<td style="padding:5px 8px; background:{hdr_colors[idx_h]}; color:white; font-weight:700; text-align:center; border:1px solid #ddd; white-space:nowrap;">{col}</td>'
                 day_html += '</tr>'
-                # Rows
+
                 for row_idx in range(len(display_day)):
                     is_total = display_day.iloc[row_idx]['Date'] == 'Total'
                     bg = '#fff9c4' if is_total else ('#f8f9fa' if row_idx % 2 == 0 else '#ffffff')
@@ -1521,18 +1153,18 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 trend_val = float(str(val).replace('%',''))
                                 row_target = row_upl_targets[row_idx]
                                 if trend_val > row_target:
-                                    cell_bg = 'background:#ffcdd2;'  # above target: light red
+                                    cell_bg = 'background:#ffcdd2;'
                                 else:
-                                    cell_bg = 'background:#c8e6c9;'  # at or under target: light green
+                                    cell_bg = 'background:#c8e6c9;'
                             except: pass
                         if col == 'Trend ' and not is_total:
                             try:
                                 trend_val = float(str(val).replace('%',''))
                                 row_target = row_pl_targets[row_idx]
                                 if trend_val > row_target:
-                                    cell_bg = 'background:#ffcdd2;'  # above target: light red
+                                    cell_bg = 'background:#ffcdd2;'
                                 else:
-                                    cell_bg = 'background:#c8e6c9;'  # at or under target: light green
+                                    cell_bg = 'background:#c8e6c9;'
                             except: pass
                         day_html += f'<td style="padding:4px 8px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} color:{cell_color}; white-space:nowrap;">{val}</td>'
                     day_html += '</tr>'
@@ -1575,14 +1207,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     agency_df_display = pd.DataFrame(agency_data)
 
-                    # Heat-scale range for the Agency-wise Trend columns, same
-                    # green->yellow->red gradient approach as Day-wise, excluding
-                    # the Total row (added below) from the scale.
-                    ag_upl_trend_vals = agency_df_display['_UPLTrendNum'].tolist()
-                    ag_pl_trend_vals = agency_df_display['_PLTrendNum'].tolist()
-                    ag_upl_vmin, ag_upl_vmax = (min(ag_upl_trend_vals), max(ag_upl_trend_vals)) if ag_upl_trend_vals else (0, 0)
-                    ag_pl_vmin, ag_pl_vmax = (min(ag_pl_trend_vals), max(ag_pl_trend_vals)) if ag_pl_trend_vals else (0, 0)
-
                     ag_t_hc = agency_df_display['Total HC'].sum()
                     ag_t_sl = agency_df_display['SL'].sum()
                     ag_t_abwi = agency_df_display['ABWI'].sum()
@@ -1610,7 +1234,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     with ag_left:
                         st.markdown("**Agency wise:-**")
-                        # Colored HTML table for agency
                         ag_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
                         ag_cols = ['Agency','Week No','Total HC','SL','ABWI','NCNS','Total UPLs','Trend','Total PLs','PL Trend']
                         ag_hdr_colors = ['#00695c','#00695c','#0d47a1','#e65100','#e65100','#e65100','#b71c1c','#2e7d32','#1565c0','#2e7d32']
@@ -1629,18 +1252,12 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                                 if col == 'Trend' and not is_total:
                                     try:
                                         tv = float(str(val).replace('%',''))
-                                        if tv > 3.50:
-                                            cell_bg = 'background:#ffcdd2;'  # above 3.50%: light red
-                                        else:
-                                            cell_bg = 'background:#c8e6c9;'  # at or below 3.50%: light green
+                                        cell_bg = 'background:#ffcdd2;' if tv > 3.50 else 'background:#c8e6c9;'
                                     except: pass
                                 if col == 'PL Trend' and not is_total:
                                     try:
                                         tv = float(str(val).replace('%',''))
-                                        if tv > 7.16:
-                                            cell_bg = 'background:#ffcdd2;'  # above 7.16%: light red
-                                        else:
-                                            cell_bg = 'background:#c8e6c9;'  # at or below 7.16%: light green
+                                        cell_bg = 'background:#ffcdd2;' if tv > 7.16 else 'background:#c8e6c9;'
                                     except: pass
                                 ag_html += f'<td style="padding:4px 6px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} white-space:nowrap;">{val}</td>'
                             ag_html += '</tr>'
@@ -1652,7 +1269,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         chart_data = agency_df_display[agency_df_display['Agency'] != 'Total'][['Agency', 'Total UPLs']].copy()
                         chart_data = chart_data.sort_values('Total UPLs', ascending=False).reset_index(drop=True)
 
-                        # Color gradient: dark red (highest) -> light red -> orange -> yellow -> light green -> green (lowest)
                         gradient_colors = ['#b71c1c', '#e53935', '#f57c00', '#fdd835', '#81c784', '#2e7d32']
                         num_bars = len(chart_data)
                         bar_colors = gradient_colors[:num_bars] if num_bars <= len(gradient_colors) else gradient_colors
@@ -1675,11 +1291,10 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         ).properties(height=320)
                         st.altair_chart(bar_chart, use_container_width=True)
 
-                # ===== BOX 3: SUMMARY + PIE CHART side by side =====
+                # ===== BOX 3: SUMMARY + PIE CHART =====
                 st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
                 st.markdown("**Summary:-**")
 
-                # Build per-week summary from day_wise_data
                 weeks_summary = {}
                 for d, fname in upl_files_found:
                     wk = get_week(d)
@@ -1697,7 +1312,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         weeks_summary[wk]['hc'] += row['Total HC']
                         weeks_summary[wk]['upl'] += row['Total UPLs']
                         weeks_summary[wk]['pl'] += row['Total PLs']
-                        # HC-weighted target, in case a week ever mixes two target values
                         weeks_summary[wk]['upl_target_wsum'] += row['_UPLTargetNum'] * row['Total HC']
                         weeks_summary[wk]['pl_target_wsum'] += row['_PLTargetNum'] * row['Total HC']
 
@@ -1707,23 +1321,17 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                     sorted_weeks = sorted(weeks_summary.keys())
                     num_weeks = len(sorted_weeks)
 
-                    # Build table with weeks as COLUMNS
                     tbl = '<table style="border-collapse:collapse; width:100%; font-size:13px; font-weight:600; border:2px solid #000;">'
-
-                    # Title row
                     tbl += '<tr style="background:#b0c4de; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:8px; border:2px solid #000; font-size:15px; font-weight:800;">UPL Trend</td></tr>'
 
-                    # ---- UNPLANNED LEAVE SECTION ----
                     tbl += '<tr style="background:#fde0d0; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Unplanned Leave</td></tr>'
 
-                    # Week header row
                     tbl += '<tr style="text-align:center;"><td style="padding:8px; border:2px solid #000; background:#c8e6c9; font-weight:700; font-size:14px;" rowspan="3">' + selected_warehouse + '</td>'
                     tbl += '<td style="padding:6px; border:2px solid #000;"></td>'
                     for wk in sorted_weeks:
                         tbl += '<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week ' + str(wk) + '</td>'
                     tbl += '</tr>'
 
-                    # Target row
                     tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
                     for wk in sorted_weeks:
                         wk_hc_t = weeks_summary[wk]['hc']
@@ -1731,7 +1339,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_upl_target:.2f}' + '%</td>'
                     tbl += '</tr>'
 
-                    # Actual UPL row
                     tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Actual</td>'
                     for wk in sorted_weeks:
                         wk_hc = weeks_summary[wk]['hc']
@@ -1740,17 +1347,14 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:7px; border:2px solid #000; background:#f1c40f; color:#000; font-weight:700;">' + str(wk_upl_trend) + '%</td>'
                     tbl += '</tr>'
 
-                    # ---- PLANNED LEAVE SECTION ----
                     tbl += '<tr style="background:#fde0d0; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Planned Leave</td></tr>'
 
-                    # Week header row
                     tbl += '<tr style="text-align:center;"><td style="padding:8px; border:2px solid #000; background:#c8e6c9; font-weight:700; font-size:14px;" rowspan="3">' + selected_warehouse + '</td>'
                     tbl += '<td style="padding:6px; border:2px solid #000;"></td>'
                     for wk in sorted_weeks:
                         tbl += '<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week ' + str(wk) + '</td>'
                     tbl += '</tr>'
 
-                    # Target row
                     tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
                     for wk in sorted_weeks:
                         wk_hc_t = weeks_summary[wk]['hc']
@@ -1758,7 +1362,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                         tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_pl_target:.2f}' + '%</td>'
                     tbl += '</tr>'
 
-                    # Actual PL row
                     tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Actual</td>'
                     for wk in sorted_weeks:
                         wk_hc = weeks_summary[wk]['hc']
@@ -1769,22 +1372,15 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                     tbl += '</table>'
                     st.markdown(tbl, unsafe_allow_html=True)
+
                 with sum_right:
-                    # Weekly double-line (mountain) chart. With 2+ weeks selected,
-                    # the two lines follow the real week-to-week values. With only
-                    # ONE week selected there's only one data point per metric, so a
-                    # line has nothing to connect to and would collapse to a dot —
-                    # to still show two visible lines, we pad the same single value
-                    # onto invisible categories on either side, so each metric draws
-                    # as a flat horizontal line spanning the chart, with the real
-                    # point/label only shown at the actual "Week NN" position.
                     if num_weeks == 1:
                         wk = sorted_weeks[0]
                         wk_hc = weeks_summary[wk]['hc']
                         wk_upl_trend = round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
                         wk_pl_trend = round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
                         wk_label = f'Week {wk}'
-                        week_order = [' ', wk_label, '  ']  # blank pad cols, unique keys
+                        week_order = [' ', wk_label, '  ']
                         chart_rows = []
                         for lbl in week_order:
                             chart_rows.append({'Week': lbl, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
@@ -1858,10 +1454,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
             if target_fallback_used:
                 st.info(
                     "ℹ️ Target column not found in one or more UPL files for the selected "
-                    "dates — used the default (3.50% UPL / 9.67% PL) for those days. "
-                    "Add the Target values to the Dashboard sheet (cell N3 for UPL Target, "
-                    "O3 for PL Target — with 'UPL Target' / 'PL Target' as labels in N2/O2) "
-                    "to show this week's actual target instead."
+                    "dates — used the default (3.50% UPL / 9.67% PL) for those days."
                 )
 
             if upl_missing_dates:
@@ -1871,10 +1464,6 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 st.warning(
                     "⚠️ HC DS/HC NS still shown from the Dashboard sheet (not Roster) for: "
                     + ', '.join(upl_shift_fallback_dates)
-                    + " — either no reliable shift column was found on the Roster sheet, or "
-                      "Roster's day/night split didn't add up to the reconciled Total HC for "
-                      "that date. So HC DS + HC NS may not exactly equal Total HC on these "
-                      "rows until the Roster sheet for that date is corrected."
                 )
 
             if upl_error_dates:
@@ -1968,8 +1557,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 f"found for {selected_warehouse} in the selected date range."
             )
 
-    # MISSING FILE WARNING
-    all_missing = sorted(set(missing_files + upl_missing))
+    all_missing = sorted(set(missing_files))
     if all_missing:
         st.warning(
             f"⚠️ Following dates have no data file for {selected_warehouse}: "
