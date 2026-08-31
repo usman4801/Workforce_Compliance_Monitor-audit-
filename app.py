@@ -12,8 +12,6 @@ os.chdir(APP_DIR)
 
 # ==========================================================
 # WEEK HELPER — Sunday-to-Sunday fixed calendar
-# Aug 2–8=Wk32, Aug 9–15=Wk33, Aug 16–22=Wk34, Aug 23–29=Wk35
-# Week anchor: Aug 2, 2026 = Week 32
 # ==========================================================
 import datetime as _dt
 
@@ -35,7 +33,7 @@ st.set_page_config(
 )
 
 # ==========================================================
-# GLOBAL CSS
+# GLOBAL CSS (Increased Tile Size)
 # ==========================================================
 st.markdown(
     """
@@ -117,67 +115,24 @@ st.markdown(
         object-fit:contain;
     }
 
-    .feature-card {
-        padding:12px;
-        border-radius:14px;
-        height:105px;
-        display:flex;
-        flex-direction:column;
-        justify-content:center;
-        align-items:center;
-        text-align:center;
-        box-shadow:0 3px 12px rgba(0,0,0,0.03);
-        border:1.5px solid;
-    }
-
-    .fc-blue {
-        background:#f0f6ff;
-        border-color:#d2e3fc;
-    }
-
-    .fc-orange {
-        background:#fefce8;
-        border-color:#fef08a;
-    }
-
-    .fc-green {
-        background:#f0fdf4;
-        border-color:#bbf7d0;
-    }
-
-    .fc-purple {
-        background:#faf5ff;
-        border-color:#f3e8ff;
-    }
-
-    .fc-title {
-        font-size:12.5px;
-        font-weight:800;
-        color:#1e1b4b;
-        margin-top:4px;
-        margin-bottom:2px;
-    }
-
-    .fc-text {
-        font-size:10px;
-        color:#475569;
-        line-height:1.2;
-        font-weight:500;
-    }
-
+    /* Increased Tile Size & Spacing */
     .metric-card {
-        padding:18px;
+        padding:22px 20px;
         border-radius:12px 12px 0 0;
         color:white;
         font-family:sans-serif;
-        box-shadow:0 4px 12px rgba(0,0,0,0.08);
+        box-shadow:0 6px 16px rgba(0,0,0,0.1);
         transition:transform 0.2s ease, box-shadow 0.2s ease;
         cursor:pointer;
+        min-height: 125px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .metric-card:hover {
         transform:translateY(-3px);
-        box-shadow:0 8px 16px rgba(0,0,0,0.15);
+        box-shadow:0 10px 20px rgba(0,0,0,0.18);
     }
 
     .card-blue {
@@ -201,17 +156,18 @@ st.markdown(
     }
 
     .card-title {
-        font-size:13px;
-        font-weight:600;
-        opacity:0.9;
-        margin-bottom:6px;
+        font-size:14px;
+        font-weight:700;
+        opacity:0.95;
+        margin-bottom:8px;
         text-transform:uppercase;
-        letter-spacing:0.5px;
+        letter-spacing:0.6px;
     }
 
     .card-value {
-        font-size:28px;
-        font-weight:800;
+        font-size:34px;
+        font-weight:900;
+        line-height:1.1;
     }
 
     .upl-section {
@@ -797,7 +753,7 @@ roster_master = get_roster_master(roster_df)
 
 
 # ==========================================================
-# CACHED UPL PROCESSOR (FIXED PATH LOOKUP)
+# CACHED UPL PROCESSOR
 # ==========================================================
 @st.cache_data(show_spinner=False)
 def process_upl_files(dates_tuple, warehouse, exclude_str):
@@ -824,7 +780,6 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
     for d in date_list:
         d_str_tag = d.strftime('%d%m%Y')
         
-        # Robust path lookup handling both folder and standard file naming patterns
         possible_upl_names = [
             os.path.join(warehouse, f"UPL-{warehouse}-{d_str_tag}.xlsx"),
             f"UPL-{warehouse}-{d_str_tag}.xlsx",
@@ -950,52 +905,54 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
 
 
 # ==========================================================
-# MAIN PROCESS
+# MAIN PROCESS WITH LOADING SPINNER
 # ==========================================================
 if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
-    final_df, missing_files = process_attendance_data(
-        tuple(selected_dates_range),
-        selected_warehouse,
-        manual_7_ids,
-        exclude_ids_input,
-        tuple(sorted(roster_hours_map.items())),
-    )
+    # Added st.spinner so users see a loading status indicator while data is fetched/processed
+    with st.spinner("🔄 Fetching and analyzing compliance data, please wait..."):
+        final_df, missing_files = process_attendance_data(
+            tuple(selected_dates_range),
+            selected_warehouse,
+            manual_7_ids,
+            exclude_ids_input,
+            tuple(sorted(roster_hours_map.items())),
+        )
 
-    mispunches = pd.DataFrame()
-    defaulters = pd.DataFrame()
-    repeated_mispunches = pd.DataFrame()
+        mispunches = pd.DataFrame()
+        defaulters = pd.DataFrame()
+        repeated_mispunches = pd.DataFrame()
 
-    if not final_df.empty:
-        mispunches = final_df[final_df["Issue Type"] == "Mispunch"].copy()
-        defaulters = final_df[final_df["Issue Type"] == "Defaulter Hours"].copy()
+        if not final_df.empty:
+            mispunches = final_df[final_df["Issue Type"] == "Mispunch"].copy()
+            defaulters = final_df[final_df["Issue Type"] == "Defaulter Hours"].copy()
 
-        if not mispunches.empty:
-            mis_counts = mispunches["P.Soft ID"].value_counts()
-            repeated_mispunches = mispunches[
-                mispunches["P.Soft ID"].isin(mis_counts[mis_counts > 1].index)
-            ]
+            if not mispunches.empty:
+                mis_counts = mispunches["P.Soft ID"].value_counts()
+                repeated_mispunches = mispunches[
+                    mispunches["P.Soft ID"].isin(mis_counts[mis_counts > 1].index)
+                ]
 
-    # Calculate UPL tile value efficiently
-    upl_tile_value = 0
-    try:
-        start_d_upl, end_d_upl = selected_dates_range
-        for d_idx in range((end_d_upl - start_d_upl).days + 1):
-            d_upl = start_d_upl + timedelta(days=d_idx)
-            d_str_tag = d_upl.strftime('%d%m%Y')
-            possible_upl_names = [
-                os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_str_tag}.xlsx"),
-                f"UPL-{selected_warehouse}-{d_str_tag}.xlsx",
-                os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"),
-                f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"
-            ]
-            upl_fname = next((p for p in possible_upl_names if os.path.exists(p)), None)
-            if upl_fname:
-                with pd.ExcelFile(upl_fname) as xl:
-                    dash_upl = xl.parse('Dashboard', dtype=str, header=None)
-                upl_tile_value += int(dash_upl.iloc[8, 6])
-    except Exception:
-        upl_tile_value = "—"
+        # Calculate UPL tile value efficiently
+        upl_tile_value = 0
+        try:
+            start_d_upl, end_d_upl = selected_dates_range
+            for d_idx in range((end_d_upl - start_d_upl).days + 1):
+                d_upl = start_d_upl + timedelta(days=d_idx)
+                d_str_tag = d_upl.strftime('%d%m%Y')
+                possible_upl_names = [
+                    os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_str_tag}.xlsx"),
+                    f"UPL-{selected_warehouse}-{d_str_tag}.xlsx",
+                    os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"),
+                    f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"
+                ]
+                upl_fname = next((p for p in possible_upl_names if os.path.exists(p)), None)
+                if upl_fname:
+                    with pd.ExcelFile(upl_fname) as xl:
+                        dash_upl = xl.parse('Dashboard', dtype=str, header=None)
+                    upl_tile_value += int(dash_upl.iloc[8, 6])
+        except Exception:
+            upl_tile_value = "—"
 
     if "selected_view" not in st.session_state:
         st.session_state.selected_view = "defaulters"
@@ -1087,16 +1044,17 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         st.markdown("<div class='upl-section'>", unsafe_allow_html=True)
         st.markdown("<div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
 
-        # Call cached processing function
-        (
-            day_wise_data,
-            all_roster_scheduled,
-            upl_files_found,
-            upl_missing_dates,
-            upl_error_dates,
-            upl_shift_fallback_dates,
-            target_fallback_used
-        ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input)
+        with st.spinner("📊 Generating UPL Report breakdown..."):
+            # Call cached processing function
+            (
+                day_wise_data,
+                all_roster_scheduled,
+                upl_files_found,
+                upl_missing_dates,
+                upl_error_dates,
+                upl_shift_fallback_dates,
+                target_fallback_used
+            ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input)
 
         if not upl_files_found:
             st.warning("⚠️ No UPL files found for selected dates. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
