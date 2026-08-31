@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # ==========================================================
-# GLOBAL CSS (Restored Feature Cards & Tile Styles)
+# GLOBAL CSS (Fixed Calendar Month Header & Metric Cards)
 # ==========================================================
 st.markdown(
     """
@@ -108,6 +108,25 @@ st.markdown(
         font-size:13px !important;
     }
 
+    /* Force Calendar Popup Month/Year Header Visibility */
+    div[data-baseweb="popover"], div[data-baseweb="calendar"] {
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+    }
+    div[data-baseweb="calendar"] div, 
+    div[data-baseweb="calendar"] span, 
+    div[data-baseweb="calendar"] button {
+        color: #0f172a !important;
+    }
+    div[data-baseweb="calendar"] header {
+        background-color: #f8fafc !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    div[data-baseweb="calendar"] header button {
+        background-color: transparent !important;
+        color: #0f172a !important;
+    }
+
     .branch-logo {
         max-height:40px;
         margin-top:6px;
@@ -115,7 +134,6 @@ st.markdown(
         object-fit:contain;
     }
 
-    /* Feature Cards Styling Restored */
     .feature-card {
         padding:16px;
         border-radius:14px;
@@ -164,22 +182,21 @@ st.markdown(
         font-weight:500;
     }
 
-    /* Increased Top Metric Cards Size */
-    .metric-card {
-        padding:22px 20px;
-        border-radius:12px 12px 0 0;
-        color:white;
-        font-family:sans-serif;
-        box-shadow:0 6px 16px rgba(0,0,0,0.1);
-        transition:transform 0.2s ease, box-shadow 0.2s ease;
-        cursor:pointer;
-        min-height: 125px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+    /* Enforced Larger Top Metric Cards Size */
+    div.metric-card {
+        padding:26px 20px !important;
+        border-radius:12px 12px 0 0 !important;
+        color:white !important;
+        font-family:sans-serif !important;
+        box-shadow:0 6px 16px rgba(0,0,0,0.1) !important;
+        cursor:pointer !important;
+        min-height: 140px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
     }
 
-    .metric-card:hover {
+    div.metric-card:hover {
         transform:translateY(-3px);
         box-shadow:0 10px 20px rgba(0,0,0,0.18);
     }
@@ -204,19 +221,19 @@ st.markdown(
         background:linear-gradient(135deg,#10b981 0%,#047857 100%);
     }
 
-    .card-title {
-        font-size:14px;
-        font-weight:700;
-        opacity:0.95;
-        margin-bottom:8px;
-        text-transform:uppercase;
-        letter-spacing:0.6px;
+    div.card-title {
+        font-size:15px !important;
+        font-weight:700 !important;
+        opacity:0.95 !important;
+        margin-bottom:8px !important;
+        text-transform:uppercase !important;
+        letter-spacing:0.6px !important;
     }
 
-    .card-value {
-        font-size:34px;
-        font-weight:900;
-        line-height:1.1;
+    div.card-value {
+        font-size:40px !important;
+        font-weight:900 !important;
+        line-height:1.1 !important;
     }
 
     .upl-section {
@@ -1577,7 +1594,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
         )
 
 else:
-    # DEFAULT FEATURE CARDS (Restored and Fully Styled)
+    # DEFAULT FEATURE CARDS
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
