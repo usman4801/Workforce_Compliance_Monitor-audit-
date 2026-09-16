@@ -303,15 +303,16 @@ def get_roster_master(roster):
 roster_master = get_roster_master(roster_df)
 
 @st.cache_data(show_spinner=False)
-def process_upl_files(dates_tuple, warehouse, exclude_str):
+def process_upl_files(dates_tuple, warehouse, exclude_str, master_roster):
     start_d, end_d = dates_tuple
     exclude_list = [clean_id(x) for x in exclude_str.split(",") if str(x).strip()] if exclude_str else []
     date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
+    
     upl_files_found, upl_missing_dates, upl_error_dates, upl_shift_fallback_dates = [], [], [], []
     day_wise_data, all_roster_scheduled = [], []
     target_fallback_used = False
 
-    master = roster_master.copy()
+    master = master_roster.copy()
     if not master.empty and exclude_list:
         master = master[~master["_Clean_ID"].isin(exclude_list)].copy()
 
@@ -403,7 +404,7 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
 
 
 # ==========================================================
-# 4. LOGIN PAGE UI (ORANGE THEME)
+# 4. LOGIN PAGE UI (ORANGE THEME - PERFECTLY CENTERED)
 # ==========================================================
 if not st.session_state.logged_in:
     st.markdown("""
@@ -417,25 +418,30 @@ if not st.session_state.logged_in:
         .stApp {
             background: linear-gradient(135deg, #7c2d12 0%, #ea580c 50%, #fdba74 100%) !important;
         }
-        
-        /* Center the container */
-        div[data-testid="stVerticalBlock"] {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
 
         /* ----------------------------------------------------
-           MAGIC FIX: MAKE THE STREAMLIT FORM A SINGLE WHITE CARD 
+           MAGIC FIX: PERFECT DEAD-CENTER ALIGNMENT 
            ---------------------------------------------------- */
+        .block-container {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            min-height: 90vh !important; /* Full height centering */
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
+        /* The White Login Card */
         [data-testid="stForm"] {
             background-color: white !important;
             border-radius: 20px !important;
-            padding: 35px 30px !important;
+            padding: 40px 35px !important;
             border: none !important;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-            width: 400px !important;
-            margin: auto;
+            width: 420px !important;
+            max-width: 90vw !important;
+            margin: 0 !important; /* No extra margins */
         }
 
         /* Style the Text Inputs Inside the Card */
@@ -464,7 +470,7 @@ if not st.session_state.logged_in:
             border: 1px solid #FCD200 !important;
             width: 100% !important;
             padding: 8px !important;
-            margin-top: 10px !important;
+            margin-top: 5px !important;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
             transition: all 0.2s ease-in-out !important;
         }
@@ -480,48 +486,56 @@ if not st.session_state.logged_in:
     </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-
-    with col2:
-        st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
-        
-        with st.form("login_form"):
-            st.markdown("""
-            <div style="text-align: center; margin-bottom: 25px;">
-                <!-- ROBOT & LOGO -->
-                <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
-                <br>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
-                <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
-                <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Username Input ONLY
-            username = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak")
-            
-            submitted = st.form_submit_button("Sign In")
-            if submitted:
-                if username:
-                    st.session_state.logged_in = True
-                    st.rerun()
-                else:
-                    st.error("Please enter your Login ID.")
-
+    # NO COLUMNS - Let Flexbox do the perfect centering!
+    with st.form("login_form"):
         st.markdown("""
-            <div style="text-align: center; color: #ffedd5; font-size: 11.5px; margin-top: 20px; font-weight: 500;">
-                © 2026 Amazon.com, Inc. or its affiliates. Confidential.
+        <div style="text-align: center; margin-bottom: 25px;">
+            <!-- ROBOT & LOGO -->
+            <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
+            <br>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
+            <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
+            <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Username Input
+        username = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak")
+        
+        # JAVMUHAK ACCESS ISSUE TEXT (Nicely placed right below input)
+        st.markdown("""
+            <div style="text-align: right; font-size: 10.5px; margin-top: -10px; margin-bottom: 15px;">
+                <span style="color: #64748b;">Access Issue? Contact </span>
+                <b style="color: #0284c7; cursor: pointer;">Javmuhak</b>
             </div>
         """, unsafe_allow_html=True)
+        
+        submitted = st.form_submit_button("Sign In")
+        
+        if submitted:
+            if username:
+                st.session_state.logged_in = True
+                st.rerun()
+            else:
+                st.error("Please enter your Login ID.")
+
+    st.markdown("""
+        <div style="text-align: center; color: #ffedd5; font-size: 11.5px; margin-top: 20px; font-weight: 500;">
+            © 2026 Amazon.com, Inc. or its affiliates. Confidential.
+        </div>
+    """, unsafe_allow_html=True)
 
 
 # ==========================================================
 # 5. MAIN DASHBOARD UI (RUNS AFTER LOGIN)
 # ==========================================================
 else:
-    # ==========================================================
-    # GLOBAL CSS FOR DASHBOARD
-    # ==========================================================
+    # --- Load Data Mappings upon login ---
+    roster_df = load_permanent_roster()
+    roster_hours_map = build_roster_hours_map(roster_df)
+    roster_master = get_roster_master(roster_df)
+
+    # --- GLOBAL CSS FOR DASHBOARD ---
     st.markdown(
         """
         <style>
@@ -555,6 +569,7 @@ else:
         }
 
         .block-container {
+            display: block !important; /* Fix flexbox from login */
             background:#ffffff !important;
             padding:1rem 1.5rem !important;
             border-radius:14px !important;
@@ -982,7 +997,7 @@ else:
                     upl_error_dates,
                     upl_shift_fallback_dates,
                     target_fallback_used
-                ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input)
+                ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input, roster_master)
 
             if not upl_files_found:
                 st.warning("⚠️ No UPL files found for selected dates. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
@@ -1513,7 +1528,6 @@ else:
                 """,
                 unsafe_allow_html=True,
             )
-
 
     # ==========================================================
     # FOOTER
