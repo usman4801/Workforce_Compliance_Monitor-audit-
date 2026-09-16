@@ -6,13 +6,11 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 import datetime as _dt
-
-# Ensure working directory is the app folder
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(APP_DIR)
+import glob
+import re
 
 # ==========================================================
-# PAGE CONFIGURATION
+# 1. PAGE CONFIGURATION (MUST BE AT THE VERY TOP)
 # ==========================================================
 st.set_page_config(
     page_title="Workforce Compliance Monitor",
@@ -20,14 +18,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# Ensure working directory is the app folder
+try:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(APP_DIR)
+except Exception:
+    pass
+
 # ==========================================================
-# SESSION STATE INITIALIZATION
+# 2. SESSION STATE SETUP
 # ==========================================================
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 # ==========================================================
-# ALL HELPER FUNCTIONS & LOGIC (Defined Globally)
+# 3. GLOBAL HELPERS & DATA LOADING LOGIC (CACHED)
 # ==========================================================
 WEEK_ANCHOR_DATE = _dt.date(2026, 8, 2)
 WEEK_ANCHOR_NUM = 32
@@ -55,7 +60,7 @@ def clean_id(val):
         return str(val).strip().lower()
 
 def normalize_col(c):
-    return str(c).strip().lower().replace("_", " ").replace("-", " ").replace(".", " ")
+    return (str(c).strip().lower().replace("_", " ").replace("-", " ").replace(".", " "))
 
 def parse_time(time_val):
     if pd.isna(time_val): return None
@@ -123,6 +128,8 @@ def load_permanent_roster():
     roster["_Clean_ID"] = roster[id_col].apply(clean_id)
     return roster
 
+roster_df = load_permanent_roster()
+
 def build_roster_hours_map(roster):
     result = {}
     if roster.empty: return result
@@ -136,23 +143,21 @@ def build_roster_hours_map(roster):
             result[cid] = "9 Hours"
     return result
 
+roster_hours_map = build_roster_hours_map(roster_df)
+
 def get_possible_paths(d, warehouse):
     d_str = d.strftime("%Y-%m-%d")
     folder = warehouse
-    if warehouse == "AUH1":
-        return [os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), os.path.join(folder, f"{d_str}.xls"), os.path.join(folder, f"{d_str}.csv"), f"{d_str}.xlsx.xlsx", f"{d_str}.xlsx", f"{d_str}.xls", f"{d_str}.csv"]
-    if warehouse == "DXB5":
-        return [os.path.join(folder, f"DXB5 {d_str}.xlsx.xlsx"), os.path.join(folder, f"DXB5 {d_str}.xlsx"), os.path.join(folder, f"DXB5 {d_str}.xls"), os.path.join(folder, f"DXB5 {d_str}.csv"), os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), f"DXB5 {d_str}.xlsx.xlsx", f"DXB5 {d_str}.xlsx"]
-    if warehouse == "DXB3":
-        return [os.path.join(folder, f"DXB3 {d_str}.xlsx.xlsx"), os.path.join(folder, f"DXB3 {d_str}.xlsx"), os.path.join(folder, f"DXB3 {d_str}.xls"), os.path.join(folder, f"DXB3 {d_str}.csv"), os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), f"DXB3 {d_str}.xlsx.xlsx", f"DXB3 {d_str}.xlsx"]
+    if warehouse == "AUH1": return [os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), os.path.join(folder, f"{d_str}.xls"), os.path.join(folder, f"{d_str}.csv"), f"{d_str}.xlsx.xlsx", f"{d_str}.xlsx", f"{d_str}.xls", f"{d_str}.csv"]
+    if warehouse == "DXB5": return [os.path.join(folder, f"DXB5 {d_str}.xlsx.xlsx"), os.path.join(folder, f"DXB5 {d_str}.xlsx"), os.path.join(folder, f"DXB5 {d_str}.xls"), os.path.join(folder, f"DXB5 {d_str}.csv"), os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), f"DXB5 {d_str}.xlsx.xlsx", f"DXB5 {d_str}.xlsx"]
+    if warehouse == "DXB3": return [os.path.join(folder, f"DXB3 {d_str}.xlsx.xlsx"), os.path.join(folder, f"DXB3 {d_str}.xlsx"), os.path.join(folder, f"DXB3 {d_str}.xls"), os.path.join(folder, f"DXB3 {d_str}.csv"), os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), f"DXB3 {d_str}.xlsx.xlsx", f"DXB3 {d_str}.xlsx"]
     return [os.path.join(folder, f"{d_str}.xlsx.xlsx"), os.path.join(folder, f"{d_str}.xlsx"), f"{d_str}.xlsx.xlsx", f"{d_str}.xlsx"]
 
 def read_daily_file(path):
     try:
         if path.lower().endswith(".csv"): return pd.read_csv(path, dtype=str)
         return pd.read_excel(path, sheet_name=0, dtype=str)
-    except Exception:
-        return pd.DataFrame()
+    except Exception: return pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
 def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, roster_map):
@@ -161,7 +166,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
     t_dfs, missing_files = [], []
     start_d, end_d = dates_tuple
     date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
-
     for d in date_list:
         d_str = d.strftime("%Y-%m-%d")
         possible_paths = get_possible_paths(d, warehouse)
@@ -175,7 +179,6 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
             continue
         tdf["Date"] = d_str
         t_dfs.append(tdf)
-
     if not t_dfs: return pd.DataFrame(), missing_files
 
     a_df = pd.concat(t_dfs, ignore_index=True)
@@ -196,8 +199,7 @@ def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, ros
     a_df["Working Hours"] = a_df.apply(get_hours, axis=1)
     ignore_kws = ["id", "name", "psoft", "employee", "building", "country", "working hours", "clean_id", "date"]
     p_cols = [col for col in a_df.columns if not any(k in col.lower() for k in ignore_kws)]
-    if len(p_cols) == 0 and len(a_df.columns) > 4:
-        p_cols = [c for c in a_df.columns[4:] if c != "Date"]
+    if len(p_cols) == 0 and len(a_df.columns) > 4: p_cols = [c for c in a_df.columns[4:] if c != "Date"]
 
     def analyze(row):
         punches = [parse_time(row.get(c)) for c in p_cols]
@@ -274,7 +276,7 @@ def detect_status_from_row(row):
             value = str(row.get(col, "")).strip().lower()
             if not value or value == "nan": continue
             if "abwi" in value or "absent without" in value: return "ABWI"
-            if value in ["ab", "abs"] or "absent" in value: return "AB"
+            if value == "ab" or value == "abs" or "absent" in value: return "AB"
             if value == "sl" or "sick leave" in value: return "SL"
             if value == "pl" or "planned leave" in value or "annual leave" in value or "vacation" in value: return "PL"
     return ""
@@ -298,17 +300,18 @@ def get_roster_master(roster):
     result["_Status"] = result[status_col].fillna("").astype(str).str.strip() if status_col else ""
     return result
 
+roster_master = get_roster_master(roster_df)
+
 @st.cache_data(show_spinner=False)
-def process_upl_files(dates_tuple, warehouse, exclude_str, master_roster):
+def process_upl_files(dates_tuple, warehouse, exclude_str):
     start_d, end_d = dates_tuple
     exclude_list = [clean_id(x) for x in exclude_str.split(",") if str(x).strip()] if exclude_str else []
     date_list = [start_d + timedelta(days=i) for i in range((end_d - start_d).days + 1)]
-    
     upl_files_found, upl_missing_dates, upl_error_dates, upl_shift_fallback_dates = [], [], [], []
     day_wise_data, all_roster_scheduled = [], []
     target_fallback_used = False
 
-    master = master_roster.copy()
+    master = roster_master.copy()
     if not master.empty and exclude_list:
         master = master[~master["_Clean_ID"].isin(exclude_list)].copy()
 
@@ -400,7 +403,7 @@ def process_upl_files(dates_tuple, warehouse, exclude_str, master_roster):
 
 
 # ==========================================================
-# 1. LOGIN PAGE (AMAZON ORANGE THEME - NO PASSWORD)
+# 4. LOGIN PAGE UI (ORANGE THEME)
 # ==========================================================
 if not st.session_state.logged_in:
     st.markdown("""
@@ -471,7 +474,7 @@ if not st.session_state.logged_in:
             box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
         }
         
-        /* Hide sidebar completely on login page */
+        /* Hide sidebar and header completely on login page */
         [data-testid="stSidebar"] { display: none !important; }
         header[data-testid="stHeader"] { display: none !important; }
     </style>
@@ -482,7 +485,6 @@ if not st.session_state.logged_in:
     with col2:
         st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
         
-        # Everything inside Form
         with st.form("login_form"):
             st.markdown("""
             <div style="text-align: center; margin-bottom: 25px;">
@@ -490,7 +492,7 @@ if not st.session_state.logged_in:
                 <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
                 <br>
                 <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
-                <h2 style="color: #0f172a; font-weight: 800; font-size: 24px; margin: 0; padding-bottom: 2px;">PXT Analytics</h2>
+                <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
                 <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
             </div>
             """, unsafe_allow_html=True)
@@ -514,15 +516,12 @@ if not st.session_state.logged_in:
 
 
 # ==========================================================
-# 2. MAIN APP / DASHBOARD (RUNS AFTER LOGIN)
+# 5. MAIN DASHBOARD UI (RUNS AFTER LOGIN)
 # ==========================================================
 else:
-    # --- Load Data Mappings upon login ---
-    roster_df = load_permanent_roster()
-    roster_hours_map = build_roster_hours_map(roster_df)
-    roster_master = get_roster_master(roster_df)
-
-    # --- GLOBAL CSS FOR DASHBOARD ---
+    # ==========================================================
+    # GLOBAL CSS FOR DASHBOARD
+    # ==========================================================
     st.markdown(
         """
         <style>
@@ -548,9 +547,11 @@ else:
             visibility:visible !important;
         }
 
-        /* Reset background for dashboard */
+        /* Show sidebar for dashboard, override login hide */
+        [data-testid="stSidebar"] { display: block !important; }
+
         .stApp {
-            background: #f8fafc !important; 
+            background: #f8fafc !important; /* Restore dashboard background */
         }
 
         .block-container {
@@ -597,6 +598,7 @@ else:
             font-size:13px !important;
         }
 
+        /* Force Calendar Popup Month/Year Header Visibility */
         div[data-baseweb="popover"], div[data-baseweb="calendar"] {
             color: #0f172a !important;
             background-color: #ffffff !important;
@@ -635,10 +637,25 @@ else:
             border:1.5px solid;
         }
 
-        .fc-blue { background:#f0f6ff; border-color:#d2e3fc; }
-        .fc-orange { background:#fefce8; border-color:#fef08a; }
-        .fc-green { background:#f0fdf4; border-color:#bbf7d0; }
-        .fc-purple { background:#faf5ff; border-color:#f3e8ff; }
+        .fc-blue {
+            background:#f0f6ff;
+            border-color:#d2e3fc;
+        }
+
+        .fc-orange {
+            background:#fefce8;
+            border-color:#fef08a;
+        }
+
+        .fc-green {
+            background:#f0fdf4;
+            border-color:#bbf7d0;
+        }
+
+        .fc-purple {
+            background:#faf5ff;
+            border-color:#f3e8ff;
+        }
 
         .fc-title {
             font-size:13.5px;
@@ -674,10 +691,21 @@ else:
             box-shadow:0 10px 20px rgba(0,0,0,0.18);
         }
 
-        .card-blue { background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); }
-        .card-red { background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%); }
-        .card-orange { background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%); }
-        .card-purple { background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%); }
+        .card-blue {
+            background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);
+        }
+
+        .card-red {
+            background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%);
+        }
+
+        .card-orange {
+            background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%);
+        }
+
+        .card-purple {
+            background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%);
+        }
 
         div.card-title {
             font-size:15px !important;
@@ -708,60 +736,116 @@ else:
             color:#111827;
             margin-bottom:12px;
         }
-        
-        /* Show sidebar again for dashboard */
-        [data-testid="stSidebar"] { display: block !important; }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # --- HEADER ---
+    # ==========================================================
+    # HEADER
+    # ==========================================================
     header_paths = ["header_banner.png", os.path.join("AUH1", "header_banner.png")]
     header_img_str = ""
     for hp in header_paths:
         header_img_str = get_base64_of_bin_file(hp)
-        if header_img_str: break
+        if header_img_str:
+            break
 
     if header_img_str:
-        st.markdown(f'<img src="data:image/png;base64,{header_img_str}" class="direct-header-img">', unsafe_allow_html=True)
+        st.markdown(
+            f'<img src="data:image/png;base64,{header_img_str}" class="direct-header-img">',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.warning("⚠️ Please upload 'header_banner.png' to the app folder.")
 
-    # --- FILTERS ---
+
+    # ==========================================================
+    # FILTERS
+    # ==========================================================
     f_col1, f_col2 = st.columns([4, 8])
+
     with f_col1:
-        selected_warehouse = st.selectbox("📍 Site", options=["AUH1", "DXB5", "DXB3"])
+        selected_warehouse = st.selectbox(
+            "📍 Site",
+            options=["AUH1", "DXB5", "DXB3"],
+        )
+
         possible_logos = [
             os.path.join(selected_warehouse, f"{selected_warehouse}_logo.png"),
             os.path.join(selected_warehouse, f"{selected_warehouse}_logo.jpeg"),
             os.path.join(selected_warehouse, f"{selected_warehouse}_logo.jpg"),
-            f"{selected_warehouse}_logo.png", f"{selected_warehouse}_logo.jpeg", f"{selected_warehouse}_logo.jpg",
+            f"{selected_warehouse}_logo.png",
+            f"{selected_warehouse}_logo.jpeg",
+            f"{selected_warehouse}_logo.jpg",
         ]
+
         logo_path = next((p for p in possible_logos if os.path.exists(p)), None)
+
         if logo_path:
             logo_base64 = get_base64_of_bin_file(logo_path)
             mime_type = "image/jpeg" if logo_path.endswith((".jpeg", ".jpg")) else "image/png"
-            st.markdown(f'<img src="data:{mime_type};base64,{logo_base64}" class="branch-logo">', unsafe_allow_html=True)
+            st.markdown(
+                f'<img src="data:{mime_type};base64,{logo_base64}" class="branch-logo">',
+                unsafe_allow_html=True,
+            )
 
     with f_col2:
-        selected_dates_range = st.date_input("Select Date Range • Instant Auto-Fetch", value=[])
+        selected_dates_range = st.date_input(
+            "Select Date Range • Instant Auto-Fetch",
+            value=[],
+        )
 
-    # --- 7-HOUR / EXCLUDE CONFIGURATION ---
+
+    # ==========================================================
+    # 7-HOUR / EXCLUDE CONFIGURATION (SIDEBAR)
+    # ==========================================================
     st.sidebar.header("⚙️ 7-Hours Configuration")
-    seven_hours_default = ("205854274, 206247771, 206930332, 206915012, 206065208, 206136723, 206200811, 205853892, 206192237, 206361774, 206348020, 206348027, 206348019, 206368537, 206348026, 206348045, 206348030, 206348048, 206348049, 206348041, 206368538, 206348029, 206348042, 205845552, 206348052, 206348054, 203875181, 203875184, 203875092, 203875089, 203875090, 203875180, 203875183, 112463068, 203875088, 203875091, 203875185, 203875186, 206868000, 206897671, 206897640, 206136735, 205231290, 205252357, 206192232, 206491343, 206128578, 206136722, 205252356, 205252538, 205199356, 206230579, 206491328, 206240253, 206930331, 206868288, 206897649, 206868005, 206239524, 206136718")
-    manual_7_ids = st.sidebar.text_area("Paste 7-Hour Employee IDs (Comma separated)", value=seven_hours_default)
-    exclude_ids_input = st.sidebar.text_area("Paste IDs to Ignore", value=("203160008, 106495539, 203118578, 203073563, 204043092, 203052485, 203160007, 113015344, 203160009, 203118579, 203073561, 203052856, 203073425, 207574273, 202383469, 202383469, 203073699"))
 
-    # LOGOUT BUTTON in Sidebar
+    seven_hours_default = (
+        "205854274, 206247771, 206930332, 206915012, 206065208, 206136723,"
+        " 206200811, 205853892, 206192237, 206361774, 206348020, 206348027,"
+        " 206348019, 206368537, 206348026, 206348045, 206348030, 206348048,"
+        " 206348049, 206348041, 206368538, 206348029, 206348042, 205845552,"
+        " 206348052, 206348054, 203875181, 203875184, 203875092, 203875089,"
+        " 203875090, 203875180, 203875183, 112463068, 203875088, 203875091,"
+        " 203875185, 203875186, 206868000, 206897671, 206897640, 206136735,"
+        " 205231290, 205252357, 206192232, 206491343, 206128578, 206136722,"
+        " 205252356, 205252538, 205199356, 206230579, 206491328, 206240253,"
+        " 206930331, 206868288, 206897649, 206868005, 206239524, 206136718"
+    )
+
+    manual_7_ids = st.sidebar.text_area(
+        "Paste 7-Hour Employee IDs (Comma separated)",
+        value=seven_hours_default,
+    )
+
+    exclude_ids_input = st.sidebar.text_area(
+        "Paste IDs to Ignore",
+        value=(
+            "203160008, 106495539, 203118578, 203073563, 204043092, 203052485,"
+            " 203160007, 113015344, 203160009, 203118579, 203073561, 203052856,"
+            " 203073425, 207574273, 202383469, 202383469, 203073699"
+        ),
+    )
+    
     st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
-    # --- MAIN PROCESS ---
+    # ==========================================================
+    # MAIN PROCESS WITH LOADING SPINNER
+    # ==========================================================
     if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
+
         with st.spinner("🔄 Fetching and analyzing compliance data, please wait..."):
             final_df, missing_files = process_attendance_data(
-                tuple(selected_dates_range), selected_warehouse, manual_7_ids, exclude_ids_input, tuple(sorted(roster_hours_map.items()))
+                tuple(selected_dates_range),
+                selected_warehouse,
+                manual_7_ids,
+                exclude_ids_input,
+                tuple(sorted(roster_hours_map.items())),
             )
 
             mispunches = pd.DataFrame()
@@ -771,10 +855,14 @@ else:
             if not final_df.empty:
                 mispunches = final_df[final_df["Issue Type"] == "Mispunch"].copy()
                 defaulters = final_df[final_df["Issue Type"] == "Defaulter Hours"].copy()
+
                 if not mispunches.empty:
                     mis_counts = mispunches["P.Soft ID"].value_counts()
-                    repeated_mispunches = mispunches[mispunches["P.Soft ID"].isin(mis_counts[mis_counts > 1].index)]
+                    repeated_mispunches = mispunches[
+                        mispunches["P.Soft ID"].isin(mis_counts[mis_counts > 1].index)
+                    ]
 
+            # Calculate UPL tile value efficiently
             upl_tile_value = 0
             try:
                 start_d_upl, end_d_upl = selected_dates_range
@@ -782,8 +870,10 @@ else:
                     d_upl = start_d_upl + timedelta(days=d_idx)
                     d_str_tag = d_upl.strftime('%d%m%Y')
                     possible_upl_names = [
-                        os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_str_tag}.xlsx"), f"UPL-{selected_warehouse}-{d_str_tag}.xlsx",
-                        os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"), f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"
+                        os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_str_tag}.xlsx"),
+                        f"UPL-{selected_warehouse}-{d_str_tag}.xlsx",
+                        os.path.join(selected_warehouse, f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"),
+                        f"UPL-{selected_warehouse}-{d_upl.strftime('%Y-%m-%d')}.xlsx"
                     ]
                     upl_fname = next((p for p in possible_upl_names if os.path.exists(p)), None)
                     if upl_fname:
@@ -798,255 +888,644 @@ else:
 
         # TOP CARDS
         c1, c2, c3, c4 = st.columns(4)
+
         with c1:
-            st.markdown(f"""<div class="metric-card card-purple" id="card_def"><div class="card-title">⏰ Defaulter Hours</div><div class="card-value">{len(defaulters)}</div></div>""", unsafe_allow_html=True)
-            if st.button("⏰ View Defaulters ➔", key="btn_def", use_container_width=True): st.session_state.selected_view = "defaulters"
+            st.markdown(
+                f"""
+                <div class="metric-card card-purple" id="card_def">
+                    <div class="card-title">⏰ Defaulter Hours</div>
+                    <div class="card-value">{len(defaulters)}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("⏰ View Defaulters ➔", key="btn_def", use_container_width=True):
+                st.session_state.selected_view = "defaulters"
+
         with c2:
-            st.markdown(f"""<div class="metric-card card-orange" id="card_mis"><div class="card-title">⚠️ Mispunches</div><div class="card-value">{len(mispunches)}</div></div>""", unsafe_allow_html=True)
-            if st.button("⚠️ View Mispunches ➔", key="btn_mis", use_container_width=True): st.session_state.selected_view = "mispunches"
+            st.markdown(
+                f"""
+                <div class="metric-card card-orange" id="card_mis">
+                    <div class="card-title">⚠️ Mispunches</div>
+                    <div class="card-value">{len(mispunches)}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("⚠️ View Mispunches ➔", key="btn_mis", use_container_width=True):
+                st.session_state.selected_view = "mispunches"
+
         with c3:
-            st.markdown(f"""<div class="metric-card card-red" id="card_rep_mis"><div class="card-title">🔄 Repeated Mispunches</div><div class="card-value">{len(repeated_mispunches)}</div></div>""", unsafe_allow_html=True)
-            if st.button("🔄 View Rep. Mispunches ➔", key="btn_rep_mis", use_container_width=True): st.session_state.selected_view = "rep_mispunches"
+            st.markdown(
+                f"""
+                <div class="metric-card card-red" id="card_rep_mis">
+                    <div class="card-title">🔄 Repeated Mispunches</div>
+                    <div class="card-value">{len(repeated_mispunches)}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("🔄 View Rep. Mispunches ➔", key="btn_rep_mis", use_container_width=True):
+                st.session_state.selected_view = "rep_mispunches"
+
         with c4:
-            st.markdown(f"""<div class="metric-card card-blue" id="card_upl"><div class="card-title">📋 UPL Report</div><div class="card-value">{upl_tile_value}</div></div>""", unsafe_allow_html=True)
-            if st.button("📋 View UPL Summary ➔", key="btn_upl", use_container_width=True): st.session_state.selected_view = "upl"
+            st.markdown(
+                f"""
+                <div class="metric-card card-blue" id="card_upl">
+                    <div class="card-title">📋 UPL Report</div>
+                    <div class="card-value">{upl_tile_value}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("📋 View UPL Summary ➔", key="btn_upl", use_container_width=True):
+                st.session_state.selected_view = "upl"
 
         # CARD CLICK JS
-        components.html("""
-        <script>
-        const doc = window.parent.document;
-        function bindCardClick(cardId, buttonTextMatch) {
-            const card = doc.getElementById(cardId);
-            if (card) {
-                card.onclick = function() {
-                    const buttons = Array.from(doc.querySelectorAll("button"));
-                    const targetBtn = buttons.find(b => b.innerText.includes(buttonTextMatch));
-                    if (targetBtn) { targetBtn.click(); }
-                };
+        components.html(
+            """
+            <script>
+            const doc = window.parent.document;
+            function bindCardClick(cardId, buttonTextMatch) {
+                const card = doc.getElementById(cardId);
+                if (card) {
+                    card.onclick = function() {
+                        const buttons = Array.from(doc.querySelectorAll("button"));
+                        const targetBtn = buttons.find(b => b.innerText.includes(buttonTextMatch));
+                        if (targetBtn) { targetBtn.click(); }
+                    };
+                }
             }
-        }
-        setTimeout(() => {
-            bindCardClick("card_def", "⏰ View Defaulters"); bindCardClick("card_mis", "⚠️ View Mispunches");
-            bindCardClick("card_rep_mis", "🔄 View Rep. Mispunches"); bindCardClick("card_upl", "📋 View UPL Summary");
-        }, 100);
-        </script>
-        """, height=0, width=0)
+            setTimeout(() => {
+                bindCardClick("card_def", "⏰ View Defaulters");
+                bindCardClick("card_mis", "⚠️ View Mispunches");
+                bindCardClick("card_rep_mis", "🔄 View Rep. Mispunches");
+                bindCardClick("card_upl", "📋 View UPL Summary");
+            }, 100);
+            </script>
+            """,
+            height=0,
+            width=0,
+        )
 
         # UPL VIEW
         if st.session_state.selected_view == "upl":
-            st.markdown("<div class='upl-section'><div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
+            st.markdown("<div class='upl-section'>", unsafe_allow_html=True)
+            st.markdown("<div class='upl-heading'>📋 UPL Report</div>", unsafe_allow_html=True)
+
             with st.spinner("📊 Generating UPL Report breakdown..."):
-                (day_wise_data, all_roster_scheduled, upl_files_found, upl_missing_dates, upl_error_dates, upl_shift_fallback_dates, target_fallback_used) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input, roster_master)
+                (
+                    day_wise_data,
+                    all_roster_scheduled,
+                    upl_files_found,
+                    upl_missing_dates,
+                    upl_error_dates,
+                    upl_shift_fallback_dates,
+                    target_fallback_used
+                ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input)
 
             if not upl_files_found:
                 st.warning("⚠️ No UPL files found for selected dates. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
             else:
                 if day_wise_data:
                     day_df = pd.DataFrame(day_wise_data)
-                    t_hc_ds, t_hc_ns, t_hc = day_df['HC DS'].sum(), day_df['HC NS'].sum(), day_df['Total HC'].sum()
-                    t_sl, t_ab, t_abwi = day_df['SL'].sum(), day_df['AB'].sum(), day_df['ABWI'].sum()
-                    t_upl, t_pl = day_df['Total UPLs'].sum(), day_df['Total PLs'].sum()
+
+                    t_hc_ds = day_df['HC DS'].sum()
+                    t_hc_ns = day_df['HC NS'].sum()
+                    t_hc = day_df['Total HC'].sum()
+                    t_sl = day_df['SL'].sum()
+                    t_ab = day_df['AB'].sum()
+                    t_abwi = day_df['ABWI'].sum()
+                    t_upl = day_df['Total UPLs'].sum()
+                    t_pl = day_df['Total PLs'].sum()
                     t_upl_trend = round((t_upl / t_hc) * 100, 2) if t_hc > 0 else 0
                     t_pl_trend = round((t_pl / t_hc) * 100, 2) if t_hc > 0 else 0
+
                     t_upl_target = round((day_df['_UPLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 3.50
                     t_pl_target = round((day_df['_PLTargetNum'] * day_df['Total HC']).sum() / t_hc, 2) if t_hc > 0 else 9.67
+
                     week_no = get_week(upl_files_found[0][0])
 
+                    # ===== BOX 1: DAY WISE =====
                     st.markdown("**Day wise:-**")
+
                     display_day = day_df[['Date','HC DS','HC NS','Total HC','SL','AB','ABWI','Total UPLs','Target','Trend','Total PLs','Target ','Trend ']].copy()
-                    total_row_df = pd.DataFrame([{'Date': 'Total', 'HC DS': t_hc_ds, 'HC NS': t_hc_ns, 'Total HC': t_hc, 'SL': t_sl, 'AB': t_ab, 'ABWI': t_abwi, 'Total UPLs': t_upl, 'Target': f'{t_upl_target:.2f}%', 'Trend': f'{t_upl_trend:.2f}%', 'Total PLs': t_pl, 'Target ': f'{t_pl_target:.2f}%', 'Trend ': f'{t_pl_trend:.2f}%'}])
+                    total_row_df = pd.DataFrame([{
+                        'Date': 'Total',
+                        'HC DS': t_hc_ds,
+                        'HC NS': t_hc_ns,
+                        'Total HC': t_hc,
+                        'SL': t_sl,
+                        'AB': t_ab,
+                        'ABWI': t_abwi,
+                        'Total UPLs': t_upl,
+                        'Target': f'{t_upl_target:.2f}%',
+                        'Trend': f'{t_upl_trend:.2f}%',
+                        'Total PLs': t_pl,
+                        'Target ': f'{t_pl_target:.2f}%',
+                        'Trend ': f'{t_pl_trend:.2f}%',
+                    }])
                     display_day = pd.concat([display_day, total_row_df], ignore_index=True)
+
                     row_upl_targets = list(day_df['_UPLTargetNum']) + [t_upl_target]
                     row_pl_targets = list(day_df['_PLTargetNum']) + [t_pl_target]
 
-                    day_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;"><tr>'
+                    day_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
+                    day_html += '<tr>'
                     hdr_colors = ['#1a237e','#1a237e','#1a237e','#0d47a1','#e65100','#e65100','#e65100','#b71c1c','#4a148c','#2e7d32','#1565c0','#4a148c','#2e7d32']
                     for idx_h, col in enumerate(display_day.columns):
                         day_html += f'<td style="padding:5px 8px; background:{hdr_colors[idx_h]}; color:white; font-weight:700; text-align:center; border:1px solid #ddd; white-space:nowrap;">{col}</td>'
                     day_html += '</tr>'
+
                     for row_idx in range(len(display_day)):
                         is_total = display_day.iloc[row_idx]['Date'] == 'Total'
-                        bg, fw = ('#fff9c4' if is_total else ('#f8f9fa' if row_idx % 2 == 0 else '#ffffff')), ('700' if is_total else '500')
+                        bg = '#fff9c4' if is_total else ('#f8f9fa' if row_idx % 2 == 0 else '#ffffff')
+                        fw = '700' if is_total else '500'
                         day_html += f'<tr style="background:{bg};">'
                         for col in display_day.columns:
-                            val, cell_bg, cell_color = display_day.iloc[row_idx][col], '', '#000'
+                            val = display_day.iloc[row_idx][col]
+                            cell_bg = ''
+                            cell_color = '#000'
                             if col == 'Trend' and not is_total:
-                                try: cell_bg = 'background:#ffcdd2;' if float(str(val).replace('%','')) > row_upl_targets[row_idx] else 'background:#c8e6c9;'
+                                try:
+                                    trend_val = float(str(val).replace('%',''))
+                                    row_target = row_upl_targets[row_idx]
+                                    if trend_val > row_target:
+                                        cell_bg = 'background:#ffcdd2;'
+                                    else:
+                                        cell_bg = 'background:#c8e6c9;'
                                 except: pass
                             if col == 'Trend ' and not is_total:
-                                try: cell_bg = 'background:#ffcdd2;' if float(str(val).replace('%','')) > row_pl_targets[row_idx] else 'background:#c8e6c9;'
+                                try:
+                                    trend_val = float(str(val).replace('%',''))
+                                    row_target = row_pl_targets[row_idx]
+                                    if trend_val > row_target:
+                                        cell_bg = 'background:#ffcdd2;'
+                                    else:
+                                        cell_bg = 'background:#c8e6c9;'
                                 except: pass
                             day_html += f'<td style="padding:4px 8px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} color:{cell_color}; white-space:nowrap;">{val}</td>'
                         day_html += '</tr>'
-                    st.markdown(day_html + '</table><div style="margin-top:18px;"></div>', unsafe_allow_html=True)
+                    day_html += '</table>'
+                    st.markdown(day_html, unsafe_allow_html=True)
 
-                    # AGENCY WISE
+                    st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
+
+                    # ===== BOX 2: AGENCY WISE + BAR CHART =====
                     if all_roster_scheduled:
                         combined_roster = pd.concat(all_roster_scheduled, ignore_index=True)
                         combined_roster['3P'] = combined_roster['3P'].replace('QuessCorp', 'Quesscorp')
+
                         agency_data = []
                         for agency in sorted(combined_roster['3P'].dropna().unique()):
                             ag = combined_roster[combined_roster['3P'] == agency]
-                            ag_hc, ag_sl, ag_abwi, ag_ab = len(ag), len(ag[ag['Attendance'] == 'SL']), len(ag[ag['Attendance'] == 'ABWI']), len(ag[ag['Attendance'] == 'AB'])
-                            ag_upl, ag_pl = ag_sl + ag_abwi + ag_ab, len(ag[ag['Attendance'] == 'PL'])
+                            ag_hc = len(ag)
+                            ag_sl = len(ag[ag['Attendance'] == 'SL'])
+                            ag_abwi = len(ag[ag['Attendance'] == 'ABWI'])
+                            ag_ab = len(ag[ag['Attendance'] == 'AB'])
+                            ag_upl = ag_sl + ag_abwi + ag_ab
+                            ag_pl = len(ag[ag['Attendance'] == 'PL'])
                             ag_upl_trend = round((ag_upl / ag_hc) * 100, 2) if ag_hc > 0 else 0
                             ag_pl_trend = round((ag_pl / ag_hc) * 100, 2) if ag_hc > 0 else 0
-                            agency_data.append({'Agency': agency, 'Week No': week_no, 'Total HC': ag_hc, 'SL': ag_sl, 'ABWI': ag_abwi, 'NCNS': ag_ab, 'Total UPLs': ag_upl, 'Trend': f'{ag_upl_trend:.2f}%', 'Total PLs': ag_pl, 'PL Trend': f'{ag_pl_trend:.2f}%', '_UPLTrendNum': ag_upl_trend, '_PLTrendNum': ag_pl_trend})
+
+                            agency_data.append({
+                                'Agency': agency,
+                                'Week No': week_no,
+                                'Total HC': ag_hc,
+                                'SL': ag_sl,
+                                'ABWI': ag_abwi,
+                                'NCNS': ag_ab,
+                                'Total UPLs': ag_upl,
+                                'Trend': f'{ag_upl_trend:.2f}%',
+                                'Total PLs': ag_pl,
+                                'PL Trend': f'{ag_pl_trend:.2f}%',
+                                '_UPLTrendNum': ag_upl_trend,
+                                '_PLTrendNum': ag_pl_trend,
+                            })
 
                         agency_df_display = pd.DataFrame(agency_data)
-                        ag_t_hc, ag_t_sl, ag_t_abwi, ag_t_ncns, ag_t_upl, ag_t_pl = agency_df_display['Total HC'].sum(), agency_df_display['SL'].sum(), agency_df_display['ABWI'].sum(), agency_df_display['NCNS'].sum(), agency_df_display['Total UPLs'].sum(), agency_df_display['Total PLs'].sum()
+
+                        ag_t_hc = agency_df_display['Total HC'].sum()
+                        ag_t_sl = agency_df_display['SL'].sum()
+                        ag_t_abwi = agency_df_display['ABWI'].sum()
+                        ag_t_ncns = agency_df_display['NCNS'].sum()
+                        ag_t_upl = agency_df_display['Total UPLs'].sum()
+                        ag_t_pl = agency_df_display['Total PLs'].sum()
                         ag_t_upl_trend = round((ag_t_upl / ag_t_hc) * 100, 2) if ag_t_hc > 0 else 0
                         ag_t_pl_trend = round((ag_t_pl / ag_t_hc) * 100, 2) if ag_t_hc > 0 else 0
-                        agency_df_display = pd.concat([agency_df_display, pd.DataFrame([{'Agency': 'Total', 'Week No': week_no, 'Total HC': ag_t_hc, 'SL': ag_t_sl, 'ABWI': ag_t_abwi, 'NCNS': ag_t_ncns, 'Total UPLs': ag_t_upl, 'Trend': f'{ag_t_upl_trend:.2f}%', 'Total PLs': ag_t_pl, 'PL Trend': f'{ag_t_pl_trend:.2f}%'}])], ignore_index=True)
+
+                        ag_total_row = pd.DataFrame([{
+                            'Agency': 'Total',
+                            'Week No': week_no,
+                            'Total HC': ag_t_hc,
+                            'SL': ag_t_sl,
+                            'ABWI': ag_t_abwi,
+                            'NCNS': ag_t_ncns,
+                            'Total UPLs': ag_t_upl,
+                            'Trend': f'{ag_t_upl_trend:.2f}%',
+                            'Total PLs': ag_t_pl,
+                            'PL Trend': f'{ag_t_pl_trend:.2f}%',
+                        }])
+                        agency_df_display = pd.concat([agency_df_display, ag_total_row], ignore_index=True)
 
                         ag_left, ag_right = st.columns([6, 4])
+
                         with ag_left:
                             st.markdown("**Agency wise:-**")
-                            ag_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;"><tr>'
-                            ag_cols, ag_hdr_colors = ['Agency','Week No','Total HC','SL','ABWI','NCNS','Total UPLs','Trend','Total PLs','PL Trend'], ['#00695c','#00695c','#0d47a1','#e65100','#e65100','#e65100','#b71c1c','#2e7d32','#1565c0','#2e7d32']
-                            for idx_h, col in enumerate(ag_cols): ag_html += f'<td style="padding:5px 6px; background:{ag_hdr_colors[idx_h]}; color:white; font-weight:700; text-align:center; border:1px solid #ddd; white-space:nowrap;">{col}</td>'
+                            ag_html = '<table style="border-collapse:collapse; width:100%; font-size:11px; font-family:sans-serif;">'
+                            ag_cols = ['Agency','Week No','Total HC','SL','ABWI','NCNS','Total UPLs','Trend','Total PLs','PL Trend']
+                            ag_hdr_colors = ['#00695c','#00695c','#0d47a1','#e65100','#e65100','#e65100','#b71c1c','#2e7d32','#1565c0','#2e7d32']
+                            ag_html += '<tr>'
+                            for idx_h, col in enumerate(ag_cols):
+                                ag_html += f'<td style="padding:5px 6px; background:{ag_hdr_colors[idx_h]}; color:white; font-weight:700; text-align:center; border:1px solid #ddd; white-space:nowrap;">{col}</td>'
                             ag_html += '</tr>'
                             for row_idx in range(len(agency_df_display)):
                                 is_total = agency_df_display.iloc[row_idx]['Agency'] == 'Total'
-                                bg, fw = ('#fff9c4' if is_total else ('#f1f8e9' if row_idx % 2 == 0 else '#ffffff')), ('700' if is_total else '500')
+                                bg = '#fff9c4' if is_total else ('#f1f8e9' if row_idx % 2 == 0 else '#ffffff')
+                                fw = '700' if is_total else '500'
                                 ag_html += f'<tr style="background:{bg};">'
                                 for col in ag_cols:
-                                    val, cell_bg = agency_df_display.iloc[row_idx][col], ''
+                                    val = agency_df_display.iloc[row_idx][col]
+                                    cell_bg = ''
                                     if col == 'Trend' and not is_total:
-                                        try: cell_bg = 'background:#ffcdd2;' if float(str(val).replace('%','')) > 3.50 else 'background:#c8e6c9;'
+                                        try:
+                                            tv = float(str(val).replace('%',''))
+                                            cell_bg = 'background:#ffcdd2;' if tv > 3.50 else 'background:#c8e6c9;'
                                         except: pass
                                     if col == 'PL Trend' and not is_total:
-                                        try: cell_bg = 'background:#ffcdd2;' if float(str(val).replace('%','')) > 7.16 else 'background:#c8e6c9;'
+                                        try:
+                                            tv = float(str(val).replace('%',''))
+                                            cell_bg = 'background:#ffcdd2;' if tv > 7.16 else 'background:#c8e6c9;'
                                         except: pass
                                     ag_html += f'<td style="padding:4px 6px; text-align:center; border:1px solid #ddd; font-weight:{fw}; {cell_bg} white-space:nowrap;">{val}</td>'
                                 ag_html += '</tr>'
-                            st.markdown(ag_html + '</table>', unsafe_allow_html=True)
+                            ag_html += '</table>'
+                            st.markdown(ag_html, unsafe_allow_html=True)
 
                         with ag_right:
                             st.markdown("#### 📊 Agency UPL Share")
-                            chart_data = agency_df_display[agency_df_display['Agency'] != 'Total'][['Agency', 'Total UPLs']].sort_values('Total UPLs', ascending=False).reset_index(drop=True)
-                            bar_colors = ['#b71c1c', '#e53935', '#f57c00', '#fdd835', '#81c784', '#2e7d32'][:len(chart_data)]
-                            chart_data['Color'] = bar_colors + ['#2e7d32'] * (len(chart_data) - len(bar_colors))
-                            bar_chart = alt.Chart(chart_data).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, size=28).encode(x=alt.X('Agency:N', sort=chart_data['Agency'].tolist(), axis=alt.Axis(labelAngle=-45, labelFontSize=10)), y=alt.Y('Total UPLs:Q', title='Total UPL Count'), color=alt.Color('Agency:N', legend=None, scale=alt.Scale(domain=chart_data['Agency'].tolist(), range=chart_data['Color'].tolist())), tooltip=['Agency', 'Total UPLs']).properties(height=320)
+                            chart_data = agency_df_display[agency_df_display['Agency'] != 'Total'][['Agency', 'Total UPLs']].copy()
+                            chart_data = chart_data.sort_values('Total UPLs', ascending=False).reset_index(drop=True)
+
+                            gradient_colors = ['#b71c1c', '#e53935', '#f57c00', '#fdd835', '#81c784', '#2e7d32']
+                            num_bars = len(chart_data)
+                            bar_colors = gradient_colors[:num_bars] if num_bars <= len(gradient_colors) else gradient_colors
+
+                            chart_data['Color'] = bar_colors[:num_bars]
+                            agency_order = chart_data['Agency'].tolist()
+
+                            bar_chart = alt.Chart(chart_data).mark_bar(
+                                cornerRadiusTopLeft=6,
+                                cornerRadiusTopRight=6,
+                                size=28,
+                            ).encode(
+                                x=alt.X('Agency:N', sort=agency_order, axis=alt.Axis(labelAngle=-45, labelFontSize=10)),
+                                y=alt.Y('Total UPLs:Q', title='Total UPL Count'),
+                                color=alt.Color('Agency:N', legend=None, scale=alt.Scale(
+                                    domain=agency_order,
+                                    range=bar_colors[:num_bars]
+                                )),
+                                tooltip=['Agency', 'Total UPLs']
+                            ).properties(height=320)
                             st.altair_chart(bar_chart, use_container_width=True)
 
-                    # SUMMARY
-                    st.markdown("<div style='margin-top:15px;'></div>**Summary:-**", unsafe_allow_html=True)
-                    weeks_summary = {}
+                # ===== BOX 3: SUMMARY + PIE CHART =====
+                st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+                st.markdown("**Summary:-**")
+
+                weeks_summary = {}
+                for d, fname in upl_files_found:
+                    wk = get_week(d)
+                    if wk not in weeks_summary:
+                        weeks_summary[wk] = {'hc': 0, 'upl': 0, 'pl': 0, 'upl_target_wsum': 0.0, 'pl_target_wsum': 0.0}
+                for row in day_wise_data:
+                    row_date_str = row['Date']
+                    row_date = None
                     for d, fname in upl_files_found:
-                        wk = get_week(d)
-                        if wk not in weeks_summary: weeks_summary[wk] = {'hc': 0, 'upl': 0, 'pl': 0, 'upl_target_wsum': 0.0, 'pl_target_wsum': 0.0}
-                    for row in day_wise_data:
-                        row_date = next((d for d, fname in upl_files_found if d.strftime('%d-%b-%y') == row['Date']), None)
-                        if row_date:
-                            wk = get_week(row_date)
-                            weeks_summary[wk]['hc'] += row['Total HC']
-                            weeks_summary[wk]['upl'] += row['Total UPLs']
-                            weeks_summary[wk]['pl'] += row['Total PLs']
-                            weeks_summary[wk]['upl_target_wsum'] += row['_UPLTargetNum'] * row['Total HC']
-                            weeks_summary[wk]['pl_target_wsum'] += row['_PLTargetNum'] * row['Total HC']
+                        if d.strftime('%d-%b-%y') == row_date_str:
+                            row_date = d
+                            break
+                    if row_date:
+                        wk = get_week(row_date)
+                        weeks_summary[wk]['hc'] += row['Total HC']
+                        weeks_summary[wk]['upl'] += row['Total UPLs']
+                        weeks_summary[wk]['pl'] += row['Total PLs']
+                        weeks_summary[wk]['upl_target_wsum'] += row['_UPLTargetNum'] * row['Total HC']
+                        weeks_summary[wk]['pl_target_wsum'] += row['_PLTargetNum'] * row['Total HC']
 
-                    sum_left, sum_right = st.columns([6, 4])
-                    with sum_left:
-                        sorted_weeks, num_weeks = sorted(weeks_summary.keys()), len(weeks_summary.keys())
-                        tbl = f'<table style="border-collapse:collapse; width:100%; font-size:13px; font-weight:600; border:2px solid #000;"><tr style="background:#b0c4de; text-align:center;"><td colspan="{num_weeks + 2}" style="padding:8px; border:2px solid #000; font-size:15px; font-weight:800;">UPL Trend</td></tr><tr style="background:#fde0d0; text-align:center;"><td colspan="{num_weeks + 2}" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Unplanned Leave</td></tr><tr style="text-align:center;"><td style="padding:8px; border:2px solid #000; background:#c8e6c9; font-weight:700; font-size:14px;" rowspan="3">{selected_warehouse}</td><td style="padding:6px; border:2px solid #000;"></td>'
-                        for wk in sorted_weeks: tbl += f'<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week {wk}</td>'
-                        tbl += '</tr><tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
-                        for wk in sorted_weeks:
-                            wk_hc_t = weeks_summary[wk]['hc']
-                            tbl += f'<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">{round(weeks_summary[wk]["upl_target_wsum"] / wk_hc_t, 2) if wk_hc_t > 0 else 3.50:.2f}%</td>'
-                        tbl += '</tr><tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Actual</td>'
-                        for wk in sorted_weeks:
-                            wk_hc = weeks_summary[wk]['hc']
-                            tbl += f'<td style="padding:7px; border:2px solid #000; background:#f1c40f; color:#000; font-weight:700;">{round((weeks_summary[wk]["upl"] / wk_hc) * 100, 2) if wk_hc > 0 else 0}%</td>'
-                        tbl += f'</tr><tr style="background:#fde0d0; text-align:center;"><td colspan="{num_weeks + 2}" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Planned Leave</td></tr><tr style="text-align:center;"><td style="padding:8px; border:2px solid #000; background:#c8e6c9; font-weight:700; font-size:14px;" rowspan="3">{selected_warehouse}</td><td style="padding:6px; border:2px solid #000;"></td>'
-                        for wk in sorted_weeks: tbl += f'<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week {wk}</td>'
-                        tbl += '</tr><tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
-                        for wk in sorted_weeks:
-                            wk_hc_t = weeks_summary[wk]['hc']
-                            tbl += f'<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">{round(weeks_summary[wk]["pl_target_wsum"] / wk_hc_t, 2) if wk_hc_t > 0 else 9.67:.2f}%</td>'
-                        tbl += '</tr><tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Actual</td>'
-                        for wk in sorted_weeks:
-                            wk_hc = weeks_summary[wk]['hc']
-                            tbl += f'<td style="padding:7px; border:2px solid #000; background:#f1c40f; color:#000; font-weight:700;">{round((weeks_summary[wk]["pl"] / wk_hc) * 100, 2) if wk_hc > 0 else 0}%</td>'
-                        st.markdown(tbl + '</tr></table>', unsafe_allow_html=True)
+                sum_left, sum_right = st.columns([6, 4])
 
-                    with sum_right:
+                with sum_left:
+                    sorted_weeks = sorted(weeks_summary.keys())
+                    num_weeks = len(sorted_weeks)
+
+                    tbl = '<table style="border-collapse:collapse; width:100%; font-size:13px; font-weight:600; border:2px solid #000;">'
+                    tbl += '<tr style="background:#b0c4de; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:8px; border:2px solid #000; font-size:15px; font-weight:800;">UPL Trend</td></tr>'
+
+                    tbl += '<tr style="background:#fde0d0; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Unplanned Leave</td></tr>'
+
+                    tbl += '<tr style="text-align:center;"><td style="padding:8px; border:2px solid #000; background:#c8e6c9; font-weight:700; font-size:14px;" rowspan="3">' + selected_warehouse + '</td>'
+                    tbl += '<td style="padding:6px; border:2px solid #000;"></td>'
+                    for wk in sorted_weeks:
+                        tbl += '<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week ' + str(wk) + '</td>'
+                    tbl += '</tr>'
+
+                    tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
+                    for wk in sorted_weeks:
+                        wk_hc_t = weeks_summary[wk]['hc']
+                        wk_upl_target = round(weeks_summary[wk]['upl_target_wsum'] / wk_hc_t, 2) if wk_hc_t > 0 else 3.50
+                        tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_upl_target:.2f}' + '%</td>'
+                    tbl += '</tr>'
+
+                    tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Actual</td>'
+                    for wk in sorted_weeks:
+                        wk_hc = weeks_summary[wk]['hc']
+                        wk_upl = weeks_summary[wk]['upl']
+                        wk_upl_trend = round((wk_upl / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                        tbl += '<td style="padding:7px; border:2px solid #000; background:#f1c40f; color:#000; font-weight:700;">' + str(wk_upl_trend) + '%</td>'
+                    tbl += '</tr>'
+
+                    tbl += '<tr style="background:#fde0d0; text-align:center;"><td colspan="' + str(num_weeks + 2) + '" style="padding:6px; border:2px solid #000; font-weight:700; font-size:14px;">Planned Leave</td></tr>'
+
+                    tbl += '<tr style="text-align:center;"><td style="padding:8px; border:2px solid #000; background:#c8e6c9; font-weight:700; font-size:14px;" rowspan="3">' + selected_warehouse + '</td>'
+                    tbl += '<td style="padding:6px; border:2px solid #000;"></td>'
+                    for wk in sorted_weeks:
+                        tbl += '<td style="padding:6px 10px; border:2px solid #000; background:#9b59b6; color:white; font-weight:700;">Week ' + str(wk) + '</td>'
+                    tbl += '</tr>'
+
+                    tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Target</td>'
+                    for wk in sorted_weeks:
+                        wk_hc_t = weeks_summary[wk]['hc']
+                        wk_pl_target = round(weeks_summary[wk]['pl_target_wsum'] / wk_hc_t, 2) if wk_hc_t > 0 else 9.67
+                        tbl += '<td style="padding:7px; border:2px solid #000; background:#2e7d32; color:white; font-weight:700;">' + f'{wk_pl_target:.2f}' + '%</td>'
+                    tbl += '</tr>'
+
+                    tbl += '<tr style="text-align:center;"><td style="padding:7px; border:2px solid #000; font-weight:700;">Actual</td>'
+                    for wk in sorted_weeks:
+                        wk_hc = weeks_summary[wk]['hc']
+                        wk_pl = weeks_summary[wk]['pl']
+                        wk_pl_trend = round((wk_pl / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                        tbl += '<td style="padding:7px; border:2px solid #000; background:#f1c40f; color:#000; font-weight:700;">' + str(wk_pl_trend) + '%</td>'
+                    tbl += '</tr>'
+
+                    tbl += '</table>'
+                    st.markdown(tbl, unsafe_allow_html=True)
+
+                with sum_right:
+                    if num_weeks == 1:
+                        wk = sorted_weeks[0]
+                        wk_hc = weeks_summary[wk]['hc']
+                        wk_upl_trend = round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                        wk_pl_trend = round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                        wk_label = f'Week {wk}'
+                        week_order = [' ', wk_label, '  ']
                         chart_rows = []
-                        week_order = [f'Week {wk}' for wk in sorted_weeks] if num_weeks > 1 else [' ', f'Week {sorted_weeks[0]}', '  ']
+                        for lbl in week_order:
+                            chart_rows.append({'Week': lbl, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
+                            chart_rows.append({'Week': lbl, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
+                        trend_df = pd.DataFrame(chart_rows)
+                        label_df = trend_df[trend_df['Week'] == wk_label]
+                    else:
+                        week_order = [f'Week {wk}' for wk in sorted_weeks]
+                        chart_rows = []
                         for wk in sorted_weeks:
                             wk_hc = weeks_summary[wk]['hc']
-                            wk_lbl = f'Week {wk}'
-                            chart_rows.extend([{'Week': wk_lbl, 'Metric': 'Unplanned Leave', 'Actual %': round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0}, {'Week': wk_lbl, 'Metric': 'Planned Leave', 'Actual %': round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0}])
-                            if num_weeks == 1:
-                                chart_rows.extend([{'Week': ' ', 'Metric': 'Unplanned Leave', 'Actual %': round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0}, {'Week': ' ', 'Metric': 'Planned Leave', 'Actual %': round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0}, {'Week': '  ', 'Metric': 'Unplanned Leave', 'Actual %': round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0}, {'Week': '  ', 'Metric': 'Planned Leave', 'Actual %': round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0}])
-                        
+                            wk_upl_trend = round((weeks_summary[wk]['upl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                            wk_pl_trend = round((weeks_summary[wk]['pl'] / wk_hc) * 100, 2) if wk_hc > 0 else 0
+                            wk_label = f'Week {wk}'
+                            chart_rows.append({'Week': wk_label, 'Metric': 'Unplanned Leave', 'Actual %': wk_upl_trend})
+                            chart_rows.append({'Week': wk_label, 'Metric': 'Planned Leave', 'Actual %': wk_pl_trend})
                         trend_df = pd.DataFrame(chart_rows)
-                        label_df = trend_df[trend_df['Week'] == f'Week {sorted_weeks[0]}'] if num_weeks == 1 else trend_df
-                        metric_colors = alt.Scale(domain=['Planned Leave', 'Unplanned Leave'], range=['#3b82f6', '#f97316'])
-                        base = alt.Chart(trend_df).encode(x=alt.X('Week:N', sort=week_order, title=None, axis=alt.Axis(domain=True, ticks=True, grid=False)))
-                        trend_area = base.mark_area(line={'strokeWidth': 2.5}, opacity=0.35, interpolate='monotone').encode(y=alt.Y('Actual %:Q', title='Actual %', axis=alt.Axis(domain=True, ticks=True, grid=True)), color=alt.Color('Metric:N', scale=metric_colors, legend=alt.Legend(orient='bottom', labelFontSize=11, labelFontWeight='bold', title=None)), detail='Metric:N', tooltip=['Week', 'Metric', 'Actual %'])
-                        trend_points = alt.Chart(label_df).mark_point(filled=True, size=70, stroke='white', strokeWidth=1.5).encode(x=alt.X('Week:N', sort=week_order), y=alt.Y('Actual %:Q'), color=alt.Color('Metric:N', scale=metric_colors, legend=None), detail='Metric:N')
-                        trend_labels = alt.Chart(label_df).mark_text(dy=-12, fontSize=10, fontWeight='bold').encode(x=alt.X('Week:N', sort=week_order), y=alt.Y('Actual %:Q'), text=alt.Text('Actual %:Q', format='.2f'), color=alt.Color('Metric:N', scale=metric_colors, legend=None), detail='Metric:N')
-                        st.altair_chart((trend_area + trend_points + trend_labels).properties(height=280), use_container_width=True)
+                        label_df = trend_df
 
-            if target_fallback_used: st.info("ℹ️ Target column not found in one or more UPL files for the selected dates — used the default (3.50% UPL / 9.67% PL) for those days.")
-            if upl_missing_dates: st.warning(f"⚠️ Missing UPL files for: {', '.join(upl_missing_dates)}")
-            if upl_shift_fallback_dates: st.warning("⚠️ HC DS/HC NS still shown from the Dashboard sheet (not Roster) for: " + ', '.join(upl_shift_fallback_dates))
-            if upl_error_dates: st.warning(f"⚠️ Could not read UPL file for: {', '.join(upl_error_dates)}")
+                    metric_colors = alt.Scale(
+                        domain=['Planned Leave', 'Unplanned Leave'],
+                        range=['#3b82f6', '#f97316']
+                    )
+
+                    base = alt.Chart(trend_df).encode(
+                        x=alt.X('Week:N', sort=week_order, title=None,
+                                axis=alt.Axis(domain=True, ticks=True, grid=False)),
+                    )
+
+                    trend_area = base.mark_area(
+                        line={'strokeWidth': 2.5},
+                        opacity=0.35,
+                        interpolate='monotone',
+                    ).encode(
+                        y=alt.Y('Actual %:Q', title='Actual %',
+                                axis=alt.Axis(domain=True, ticks=True, grid=True)),
+                        color=alt.Color('Metric:N', scale=metric_colors, legend=alt.Legend(
+                            orient='bottom',
+                            labelFontSize=11,
+                            labelFontWeight='bold',
+                            title=None
+                        )),
+                        detail='Metric:N',
+                        tooltip=['Week', 'Metric', 'Actual %']
+                    )
+
+                    trend_points = alt.Chart(label_df).mark_point(
+                        filled=True, size=70, stroke='white', strokeWidth=1.5
+                    ).encode(
+                        x=alt.X('Week:N', sort=week_order),
+                        y=alt.Y('Actual %:Q'),
+                        color=alt.Color('Metric:N', scale=metric_colors, legend=None),
+                        detail='Metric:N',
+                    )
+
+                    trend_labels = alt.Chart(label_df).mark_text(
+                        dy=-12, fontSize=10, fontWeight='bold'
+                    ).encode(
+                        x=alt.X('Week:N', sort=week_order),
+                        y=alt.Y('Actual %:Q'),
+                        text=alt.Text('Actual %:Q', format='.2f'),
+                        color=alt.Color('Metric:N', scale=metric_colors, legend=None),
+                        detail='Metric:N',
+                    )
+
+                    st.altair_chart(
+                        (trend_area + trend_points + trend_labels).properties(height=280),
+                        use_container_width=True,
+                    )
+
+            if target_fallback_used:
+                st.info(
+                    "ℹ️ Target column not found in one or more UPL files for the selected "
+                    "dates — used the default (3.50% UPL / 9.67% PL) for those days."
+                )
+
+            if upl_missing_dates:
+                st.warning(f"⚠️ Missing UPL files for: {', '.join(upl_missing_dates)}")
+
+            if upl_shift_fallback_dates:
+                st.warning(
+                    "⚠️ HC DS/HC NS still shown from the Dashboard sheet (not Roster) for: "
+                    + ', '.join(upl_shift_fallback_dates)
+                )
+
+            if upl_error_dates:
+                st.warning(f"⚠️ Could not read UPL file for: {', '.join(upl_error_dates)}")
+
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # EXISTING VIEWS
+        # EXISTING MIS VIEWS
         else:
             if not final_df.empty:
                 display_df = final_df.copy()
-                if st.session_state.selected_view == "rep_mispunches": display_df = repeated_mispunches.copy()
-                elif st.session_state.selected_view == "mispunches": display_df = mispunches.copy()
-                elif st.session_state.selected_view == "defaulters": display_df = defaulters.copy()
+
+                if st.session_state.selected_view == "rep_mispunches":
+                    display_df = repeated_mispunches.copy()
+                elif st.session_state.selected_view == "mispunches":
+                    display_df = mispunches.copy()
+                elif st.session_state.selected_view == "defaulters":
+                    display_df = defaulters.copy()
 
                 display_df.sort_values(by=["P.Soft ID", "Date"], inplace=True)
+
                 st.subheader(f"📊 Results View ({len(display_df)} Records)")
 
                 col_search, col_download = st.columns([7, 3])
-                with col_search: search = st.text_input("🔍 Search Employee by Name or ID...")
+
+                with col_search:
+                    search = st.text_input("🔍 Search Employee by Name or ID...")
+
                 with col_download:
                     st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
                     csv_data = display_df.to_csv(index=False).encode("utf-8")
-                    st.download_button(label="📥 Download File", data=csv_data, file_name=f"compliance_report_{st.session_state.selected_view}.csv", mime="text/csv", use_container_width=True)
+                    st.download_button(
+                        label="📥 Download File",
+                        data=csv_data,
+                        file_name=f"compliance_report_{st.session_state.selected_view}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
 
                 if search and not display_df.empty and "Employee Name" in display_df.columns:
-                    display_df = display_df[display_df["Employee Name"].astype(str).str.contains(search, case=False, na=False) | display_df["P.Soft ID"].astype(str).str.contains(search, case=False, na=False)]
+                    display_df = display_df[
+                        display_df["Employee Name"].astype(str).str.contains(search, case=False, na=False)
+                        | display_df["P.Soft ID"].astype(str).str.contains(search, case=False, na=False)
+                    ]
 
                 cols_to_drop = ["Issue Type"]
                 if st.session_state.selected_view in ["defaulters", "rep_defaulters"]:
                     cols_to_drop.append("Total Punches")
                     cols_to_drop.extend([c for c in display_df.columns if "IN" in c or "OUT" in c])
 
-                final_display_df = display_df.drop(columns=[c for c in cols_to_drop if c in display_df.columns])
+                final_display_df = display_df.drop(
+                    columns=[c for c in cols_to_drop if c in display_df.columns]
+                )
 
                 try:
-                    selection_event = st.dataframe(final_display_df, use_container_width=True, hide_index=True, height=380, on_select="rerun", selection_mode="single-row")
-                    if selection_event and len(selection_event.selection.rows) > 0 and "P.Soft ID" in final_display_df.columns:
+                    selection_event = st.dataframe(
+                        final_display_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        height=380,
+                        on_select="rerun",
+                        selection_mode="single-row",
+                    )
+
+                    if (
+                        selection_event
+                        and len(selection_event.selection.rows) > 0
+                        and "P.Soft ID" in final_display_df.columns
+                    ):
                         selected_idx = selection_event.selection.rows[0]
                         selected_id = final_display_df.iloc[selected_idx]["P.Soft ID"]
                         selected_name = final_display_df.iloc[selected_idx]["Employee Name"]
-                        total_offenses = len(final_display_df[final_display_df["P.Soft ID"] == selected_id])
-                        st.info(f"📌 **{selected_name}** (ID: {selected_id}) ki is list mein total **{total_offenses}** entries hain.")
+                        total_offenses = len(
+                            final_display_df[final_display_df["P.Soft ID"] == selected_id]
+                        )
+                        st.info(
+                            f"📌 **{selected_name}** (ID: {selected_id}) "
+                            f"ki is list mein total **{total_offenses}** entries hain."
+                        )
+
                 except Exception:
-                    st.dataframe(final_display_df, use_container_width=True, hide_index=True, height=380)
+                    st.dataframe(
+                        final_display_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        height=380,
+                    )
             else:
-                st.info(f"📂 **No data reflected:** No valid attendance records found for {selected_warehouse} in the selected date range.")
+                st.info(
+                    f"📂 **No data reflected:** No valid attendance records "
+                    f"found for {selected_warehouse} in the selected date range."
+                )
 
         all_missing = sorted(set(missing_files))
-        if all_missing: st.warning(f"⚠️ Following dates have no data file for {selected_warehouse}: " + ", ".join(all_missing))
+        if all_missing:
+            st.warning(
+                f"⚠️ Following dates have no data file for {selected_warehouse}: "
+                + ", ".join(all_missing)
+            )
 
     else:
         # DEFAULT FEATURE CARDS
         c1, c2, c3, c4 = st.columns(4)
-        with c1: st.markdown("""<div class="feature-card fc-blue"><div style="font-size:20px;">📊</div><div class="fc-title">Accurate Attendance</div><div class="fc-text">Detect mispunches & anomalies</div></div>""", unsafe_allow_html=True)
-        with c2: st.markdown("""<div class="feature-card fc-orange"><div style="font-size:20px;">🛡️</div><div class="fc-title">Policy Compliance</div><div class="fc-text">Ensure workforce discipline</div></div>""", unsafe_allow_html=True)
-        with c3: st.markdown("""<div class="feature-card fc-green"><div style="font-size:20px;">📈</div><div class="fc-title">Smart Analytics</div><div class="fc-text">Actionable intelligence</div></div>""", unsafe_allow_html=True)
-        with c4: st.markdown("""<div class="feature-card fc-purple"><div style="font-size:20px;">👥</div><div class="fc-title">Reliable Team</div><div class="fc-text">Boost productivity</div></div>""", unsafe_allow_html=True)
 
+        with c1:
+            st.markdown(
+                """
+                <div class="feature-card fc-blue">
+                    <div style="font-size:20px;">📊</div>
+                    <div class="fc-title">Accurate Attendance</div>
+                    <div class="fc-text">Detect mispunches & anomalies</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with c2:
+            st.markdown(
+                """
+                <div class="feature-card fc-orange">
+                    <div style="font-size:20px;">🛡️</div>
+                    <div class="fc-title">Policy Compliance</div>
+                    <div class="fc-text">Ensure workforce discipline</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with c3:
+            st.markdown(
+                """
+                <div class="feature-card fc-green">
+                    <div style="font-size:20px;">📈</div>
+                    <div class="fc-title">Smart Analytics</div>
+                    <div class="fc-text">Actionable intelligence</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with c4:
+            st.markdown(
+                """
+                <div class="feature-card fc-purple">
+                    <div style="font-size:20px;">👥</div>
+                    <div class="fc-title">Reliable Team</div>
+                    <div class="fc-text">Boost productivity</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+    # ==========================================================
     # FOOTER
-    st.markdown("<hr style='border:none; border-top:1px solid #e2e8f0; margin:10px 0 6px 0;'><p style='text-align:center; color:#64748b; font-size:11px; font-weight:600; margin:0;'>Built for a smarter, stronger and compliant workplace</p>", unsafe_allow_html=True)
+    # ==========================================================
+    st.markdown(
+        "<hr style='border:none; border-top:1px solid #e2e8f0; margin:10px 0 6px 0;'>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<p style='text-align:center; color:#64748b; font-size:11px; font-weight:600; margin:0;'>"
+        "Built for a smarter, stronger and compliant workplace"
+        "</p>",
+        unsafe_allow_html=True,
+    )
