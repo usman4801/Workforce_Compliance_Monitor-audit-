@@ -38,7 +38,6 @@ WEEK_ANCHOR_DATE = _dt.date(2026, 8, 2)
 WEEK_ANCHOR_NUM = 32
 
 def get_week(d):
-    """Return custom week number based on Sunday-to-Sunday calendar."""
     if hasattr(d, 'date'):
         d = d.date()
     delta = (d - WEEK_ANCHOR_DATE).days
@@ -419,19 +418,6 @@ if not st.session_state.logged_in:
             background: linear-gradient(135deg, #7c2d12 0%, #ea580c 50%, #fdba74 100%) !important;
         }
 
-        /* ----------------------------------------------------
-           MAGIC FIX: PERFECT DEAD-CENTER ALIGNMENT 
-           ---------------------------------------------------- */
-        .block-container {
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: center !important;
-            min-height: 90vh !important; /* Full height centering */
-            padding: 0 !important;
-            max-width: 100% !important;
-        }
-
         /* The White Login Card */
         [data-testid="stForm"] {
             background-color: white !important;
@@ -439,9 +425,8 @@ if not st.session_state.logged_in:
             padding: 40px 35px !important;
             border: none !important;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-            width: 420px !important;
-            max-width: 90vw !important;
-            margin: 0 !important; /* No extra margins */
+            max-width: 420px !important; 
+            margin: 0 auto !important; /* Perfect Center Alignment inside column */
         }
 
         /* Style the Text Inputs Inside the Card */
@@ -486,55 +471,56 @@ if not st.session_state.logged_in:
     </style>
     """, unsafe_allow_html=True)
 
-    # NO COLUMNS - Let Flexbox do the perfect centering!
-    with st.form("login_form"):
+    # Vertical Push down
+    st.markdown("<div style='height: 10vh;'></div>", unsafe_allow_html=True)
+    
+    # 3-Column Layout to guarantee Center Alignment
+    col_left, col_center, col_right = st.columns([1, 1.2, 1])
+    
+    with col_center:
+        with st.form("login_form"):
+            st.markdown("""
+            <div style="text-align: center; margin-bottom: 25px;">
+                <!-- ROBOT & LOGO -->
+                <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
+                <br>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
+                <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
+                <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Username Input ONLY
+            username = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak")
+            
+            # JAVMUHAK ACCESS ISSUE TEXT (Nicely placed right below input)
+            st.markdown("""
+                <div style="text-align: right; font-size: 10.5px; margin-top: -10px; margin-bottom: 15px;">
+                    <span style="color: #64748b;">Access Issue? Contact </span>
+                    <b style="color: #0284c7; cursor: pointer;">Javmuhak</b>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            submitted = st.form_submit_button("Sign In")
+            
+            if submitted:
+                if username:
+                    st.session_state.logged_in = True
+                    st.rerun()
+                else:
+                    st.error("Please enter your Login ID.")
+
         st.markdown("""
-        <div style="text-align: center; margin-bottom: 25px;">
-            <!-- ROBOT & LOGO -->
-            <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
-            <br>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
-            <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
-            <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Username Input
-        username = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak")
-        
-        # JAVMUHAK ACCESS ISSUE TEXT (Nicely placed right below input)
-        st.markdown("""
-            <div style="text-align: right; font-size: 10.5px; margin-top: -10px; margin-bottom: 15px;">
-                <span style="color: #64748b;">Access Issue? Contact </span>
-                <b style="color: #0284c7; cursor: pointer;">Javmuhak</b>
+            <div style="text-align: center; color: #ffedd5; font-size: 11.5px; margin-top: 20px; font-weight: 500;">
+                © 2026 Amazon.com, Inc. or its affiliates. Confidential.
             </div>
         """, unsafe_allow_html=True)
-        
-        submitted = st.form_submit_button("Sign In")
-        
-        if submitted:
-            if username:
-                st.session_state.logged_in = True
-                st.rerun()
-            else:
-                st.error("Please enter your Login ID.")
-
-    st.markdown("""
-        <div style="text-align: center; color: #ffedd5; font-size: 11.5px; margin-top: 20px; font-weight: 500;">
-            © 2026 Amazon.com, Inc. or its affiliates. Confidential.
-        </div>
-    """, unsafe_allow_html=True)
 
 
 # ==========================================================
 # 5. MAIN DASHBOARD UI (RUNS AFTER LOGIN)
 # ==========================================================
 else:
-    # --- Load Data Mappings upon login ---
-    roster_df = load_permanent_roster()
-    roster_hours_map = build_roster_hours_map(roster_df)
-    roster_master = get_roster_master(roster_df)
-
     # --- GLOBAL CSS FOR DASHBOARD ---
     st.markdown(
         """
@@ -652,25 +638,10 @@ else:
             border:1.5px solid;
         }
 
-        .fc-blue {
-            background:#f0f6ff;
-            border-color:#d2e3fc;
-        }
-
-        .fc-orange {
-            background:#fefce8;
-            border-color:#fef08a;
-        }
-
-        .fc-green {
-            background:#f0fdf4;
-            border-color:#bbf7d0;
-        }
-
-        .fc-purple {
-            background:#faf5ff;
-            border-color:#f3e8ff;
-        }
+        .fc-blue { background:#f0f6ff; border-color:#d2e3fc; }
+        .fc-orange { background:#fefce8; border-color:#fef08a; }
+        .fc-green { background:#f0fdf4; border-color:#bbf7d0; }
+        .fc-purple { background:#faf5ff; border-color:#f3e8ff; }
 
         .fc-title {
             font-size:13.5px;
@@ -706,21 +677,10 @@ else:
             box-shadow:0 10px 20px rgba(0,0,0,0.18);
         }
 
-        .card-blue {
-            background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);
-        }
-
-        .card-red {
-            background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%);
-        }
-
-        .card-orange {
-            background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%);
-        }
-
-        .card-purple {
-            background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%);
-        }
+        .card-blue { background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); }
+        .card-red { background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%); }
+        .card-orange { background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%); }
+        .card-purple { background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%); }
 
         div.card-title {
             font-size:15px !important;
@@ -774,7 +734,6 @@ else:
     else:
         st.warning("⚠️ Please upload 'header_banner.png' to the app folder.")
 
-
     # ==========================================================
     # FILTERS
     # ==========================================================
@@ -810,7 +769,6 @@ else:
             "Select Date Range • Instant Auto-Fetch",
             value=[],
         )
-
 
     # ==========================================================
     # 7-HOUR / EXCLUDE CONFIGURATION (SIDEBAR)
