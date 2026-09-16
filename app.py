@@ -38,6 +38,7 @@ WEEK_ANCHOR_DATE = _dt.date(2026, 8, 2)
 WEEK_ANCHOR_NUM = 32
 
 def get_week(d):
+    """Return custom week number based on Sunday-to-Sunday calendar."""
     if hasattr(d, 'date'):
         d = d.date()
     delta = (d - WEEK_ANCHOR_DATE).days
@@ -403,19 +404,35 @@ def process_upl_files(dates_tuple, warehouse, exclude_str, master_roster):
 
 
 # ==========================================================
-# 4. LOGIN PAGE UI (ORANGE THEME - PERFECTLY CENTERED)
+# 4. LOGIN PAGE UI (PERFECTLY CENTERED, NO SCROLLING)
 # ==========================================================
 if not st.session_state.logged_in:
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        html, body, [class*="css"] {
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
-        }
         
-        /* Modern Premium ORANGE Gradient Background */
-        .stApp {
+        /* Stop the body from scrolling completely */
+        html, body, .stApp {
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            overflow: hidden !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100vh !important;
             background: linear-gradient(135deg, #7c2d12 0%, #ea580c 50%, #fdba74 100%) !important;
+        }
+
+        /* ----------------------------------------------------
+           MAGIC FIX: PERFECT DEAD-CENTER ALIGNMENT 
+           ---------------------------------------------------- */
+        .block-container {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            height: 100vh !important; /* Force exact viewport height */
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
         }
 
         /* The White Login Card */
@@ -425,8 +442,9 @@ if not st.session_state.logged_in:
             padding: 40px 35px !important;
             border: none !important;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-            max-width: 420px !important; 
-            margin: 0 auto !important; /* Perfect Center Alignment inside column */
+            width: 420px !important;
+            max-width: 90vw !important;
+            margin: 0 !important; 
         }
 
         /* Style the Text Inputs Inside the Card */
@@ -471,57 +489,51 @@ if not st.session_state.logged_in:
     </style>
     """, unsafe_allow_html=True)
 
-    # Vertical Push down
-    st.markdown("<div style='height: 10vh;'></div>", unsafe_allow_html=True)
-    
-    # 3-Column Layout to guarantee Center Alignment
-    col_left, col_center, col_right = st.columns([1, 1.2, 1])
-    
-    with col_center:
-        with st.form("login_form"):
-            st.markdown("""
-            <div style="text-align: center; margin-bottom: 25px;">
-                <!-- ROBOT & LOGO -->
-                <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
-                <br>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
-                <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
-                <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Username Input ONLY
-            username = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak")
-            
-            # JAVMUHAK ACCESS ISSUE TEXT (Nicely placed right below input)
-            st.markdown("""
-                <div style="text-align: right; font-size: 10.5px; margin-top: -10px; margin-bottom: 15px;">
-                    <span style="color: #64748b;">Access Issue? Contact </span>
-                    <b style="color: #0284c7; cursor: pointer;">Javmuhak</b>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            submitted = st.form_submit_button("Sign In")
-            
-            if submitted:
-                if username:
-                    st.session_state.logged_in = True
-                    st.rerun()
-                else:
-                    st.error("Please enter your Login ID.")
-
+    # DIRECTLY PLACE THE FORM (NO COLUMNS, NO SPACERS)
+    with st.form("login_form"):
         st.markdown("""
-            <div style="text-align: center; color: #ffedd5; font-size: 11.5px; margin-top: 20px; font-weight: 500;">
-                © 2026 Amazon.com, Inc. or its affiliates. Confidential.
+        <div style="text-align: center; margin-bottom: 25px;">
+            <!-- ROBOT & LOGO -->
+            <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
+            <br>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
+            <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
+            <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Username Input
+        username = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak")
+        
+        # JAVMUHAK ACCESS ISSUE TEXT
+        st.markdown("""
+            <div style="text-align: right; font-size: 10.5px; margin-top: -10px; margin-bottom: 15px;">
+                <span style="color: #64748b;">Access Issue? Contact </span>
+                <b style="color: #0284c7; cursor: pointer;">Javmuhak</b>
             </div>
         """, unsafe_allow_html=True)
+        
+        submitted = st.form_submit_button("Sign In")
+        
+        if submitted:
+            if username:
+                st.session_state.logged_in = True
+                st.rerun()
+            else:
+                st.error("Please enter your Login ID.")
+
+    st.markdown("""
+        <div style="text-align: center; color: #ffedd5; font-size: 11.5px; margin-top: 20px; font-weight: 500;">
+            © 2026 Amazon.com, Inc. or its affiliates. Confidential.
+        </div>
+    """, unsafe_allow_html=True)
 
 
 # ==========================================================
 # 5. MAIN DASHBOARD UI (RUNS AFTER LOGIN)
 # ==========================================================
 else:
-    # --- GLOBAL CSS FOR DASHBOARD ---
+    # --- GLOBAL CSS FOR DASHBOARD (RESTORE SCROLLING AND NORMAL LAYOUT) ---
     st.markdown(
         """
         <style>
@@ -547,15 +559,17 @@ else:
             visibility:visible !important;
         }
 
-        /* Show sidebar for dashboard, override login hide */
-        [data-testid="stSidebar"] { display: block !important; }
-
-        .stApp {
-            background: #f8fafc !important; /* Restore dashboard background */
+        /* Restore scrolling and sidebar for dashboard */
+        html, body, .stApp {
+            overflow: auto !important;
+            height: auto !important;
+            background: #f8fafc !important; 
         }
 
+        [data-testid="stSidebar"] { display: block !important; }
+
         .block-container {
-            display: block !important; /* Fix flexbox from login */
+            display: block !important; /* Restore normal block layout */
             background:#ffffff !important;
             padding:1rem 1.5rem !important;
             border-radius:14px !important;
@@ -563,6 +577,7 @@ else:
             box-shadow:0 6px 20px rgba(0,0,0,0.05) !important;
             border:1px solid #e2e8f0 !important;
             max-width:100% !important;
+            height: auto !important;
         }
 
         .direct-header-img {
