@@ -58,58 +58,94 @@ if "authenticated" not in st.session_state:
     st.session_state.login_error = False
 
 if not st.session_state.authenticated:
-    _bg_paths = ["header_banner.png", os.path.join("AUH1", "header_banner.png")]
-    _bg_b64 = ""
-    for _bp in _bg_paths:
-        _bg_data = read_file_bytes(_bp)
-        if _bg_data:
-            _bg_b64 = base64.b64encode(_bg_data).decode()
-            break
-
-    _bg_css = ""
-    if _bg_b64:
-        _bg_css = f"background-image: url('data:image/png;base64,{_bg_b64}'); background-size: cover; background-position: center;"
-
-    st.markdown(f"""
+    st.markdown("""
     <style>
-    .stApp {{
-        {_bg_css}
-        background-color: #1a1a2e;
-    }}
-    .stApp::before {{
-        content: "";
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        z-index: 0;
-    }}
-    .block-container {{
-        background: transparent !important;
-        box-shadow: none !important;
-        border: none !important;
-        position: relative;
-        z-index: 1;
-    }}
-    [data-testid="stSidebar"] {{ display: none !important; }}
-    #MainMenu {{ visibility: hidden; }}
-    header {{ visibility: hidden; }}
-    footer {{ visibility: hidden; }}
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        html, body, [class*="css"] {
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }
+
+        /* Modern Premium ORANGE Gradient Background */
+        .stApp {
+            background: linear-gradient(135deg, #7c2d12 0%, #ea580c 50%, #fdba74 100%) !important;
+        }
+
+        /* The White Login Card */
+        [data-testid="stForm"] {
+            background-color: white !important;
+            border-radius: 20px !important;
+            padding: 40px 35px !important;
+            border: none !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+        }
+
+        /* Style the Text Inputs Inside the Card */
+        div[data-testid="stTextInput"] label {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+        }
+        div[data-testid="stTextInput"] div[data-baseweb="input"] {
+            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #f8fafc !important;
+        }
+        div[data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {
+            border-color: #f90 !important;
+            box-shadow: 0 0 0 1px #f90 !important;
+        }
+
+        /* Style the Login Button */
+        [data-testid="stFormSubmitButton"] > button {
+            background-color: #FFD814 !important; /* Amazon Yellow */
+            color: #0F1111 !important;
+            font-weight: 800 !important;
+            font-size: 15px !important;
+            border-radius: 8px !important;
+            border: 1px solid #FCD200 !important;
+            width: 100% !important;
+            padding: 8px !important;
+            margin-top: 5px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        [data-testid="stFormSubmitButton"] > button:hover {
+            background-color: #F7CA00 !important;
+            border-color: #F2C200 !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        }
+
+        /* Hide sidebar and header completely on login page */
+        [data-testid="stSidebar"] { display: none !important; }
+        header[data-testid="stHeader"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    _s1, _lc, _s2 = st.columns([1.5, 1, 1.5])
-    with _lc:
-        st.markdown("""
-        <div style="text-align:center; margin-top:100px; margin-bottom:10px;">
-            <div style="font-size:40px;">&#128274;</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("<div style='height: 8vh;'></div>", unsafe_allow_html=True)
 
+    _s1, _lc, _s2 = st.columns([1, 1.2, 1])
+    with _lc:
         with st.form("login_form", clear_on_submit=False):
-            login_input = st.text_input("login", placeholder="Enter your login", label_visibility="collapsed")
-            submitted = st.form_submit_button("Access Dashboard", use_container_width=True)
+            st.markdown("""
+            <div style="text-align: center; margin-bottom: 25px;">
+                <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Robot.png" width="90" style="margin-bottom: 5px; filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.1));">
+                <br>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" width="115" style="margin-bottom: 12px;">
+                <h2 style="color: #0f172a; font-weight: 800; font-size: 19px; margin: 0; padding-bottom: 2px;">workforce_compliance_monitor-audit</h2>
+                <p style="color: #64748b; font-size: 12.5px; margin: 0;">Internal Portal • Sign in to continue</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            login_input = st.text_input("Amazon Login ID", placeholder="e.g. javmuhak", label_visibility="collapsed")
+
+            st.markdown("""
+                <div style="text-align: right; font-size: 10.5px; margin-top: -10px; margin-bottom: 15px;">
+                    <span style="color: #64748b;">Access Issue? Contact </span>
+                    <b style="color: #0284c7; cursor: pointer;">Javmuhak</b>
+                </div>
+            """, unsafe_allow_html=True)
+
+            submitted = st.form_submit_button("Sign In", use_container_width=True)
 
             if submitted:
                 clean_login = login_input.strip().lower()
@@ -124,16 +160,16 @@ if not st.session_state.authenticated:
 
         if st.session_state.login_error:
             st.markdown(
-                '<p style="text-align:center; color:#ef4444; font-size:12px; font-weight:600; margin-top:5px;">'
+                '<p style="text-align:center; color:#fff; font-size:12px; font-weight:600; margin-top:5px;">'
                 'Access denied. Your login is not authorized.</p>',
                 unsafe_allow_html=True,
             )
 
-        st.markdown(
-            '<p style="text-align:center; color:#1f2937; font-size:11px; margin-top:12px; font-weight:500;">'
-            'Having trouble? Contact <b>javmuhak</b></p>',
-            unsafe_allow_html=True,
-        )
+        st.markdown("""
+            <div style="text-align: center; color: #ffedd5; font-size: 11px; margin-top: 15px; font-weight: 500;">
+                © 2026 Amazon.com, Inc. or its affiliates. Confidential.
+            </div>
+        """, unsafe_allow_html=True)
 
     st.stop()
 
@@ -415,18 +451,6 @@ def clean_id(val):
         return str(val).strip().lower()
 
 
-AGENCY_NAME_MAP = {
-    'QuessCorp': 'Quesscorp',
-    'BlueBadge': 'Blue Badge',
-    'Blue-Badge': 'Blue Badge',
-    'BLUE BADGE': 'Blue Badge',
-}
-
-
-def normalize_agency(series):
-    return series.replace(AGENCY_NAME_MAP).str.strip()
-
-
 def normalize_col(c):
     return (
         str(c)
@@ -572,14 +596,6 @@ with f_col2:
 
 
 # ==========================================================
-# MANUAL CACHE REFRESH
-# ==========================================================
-if st.sidebar.button("🔄 Refresh Data (clear cache)"):
-    st.cache_data.clear()
-    st.rerun()
-st.sidebar.caption("Data auto-refreshes every 10 min, or click above after uploading a new file.")
-
-# ==========================================================
 # 7-HOUR / EXCLUDE CONFIGURATION
 # ==========================================================
 st.sidebar.header("⚙️ 7-Hours Configuration")
@@ -615,7 +631,7 @@ exclude_ids_input = st.sidebar.text_area(
 # ==========================================================
 # LOAD HC MASTER
 # ==========================================================
-@st.cache_data(show_spinner=False, ttl=600)
+@st.cache_data(show_spinner=False)
 def load_permanent_roster():
     roster = pd.DataFrame()
     possible_files = [
@@ -750,7 +766,7 @@ def read_daily_file(path):
 # ==========================================================
 # EXISTING ATTENDANCE PROCESSOR
 # ==========================================================
-@st.cache_data(show_spinner=False, ttl=600)
+@st.cache_data(show_spinner=False)
 def process_attendance_data(dates_tuple, warehouse, manual_str, exclude_str, roster_map):
     manual_list = [clean_id(x) for x in manual_str.split(",")] if manual_str else []
     exclude_list = [clean_id(x) for x in exclude_str.split(",")] if exclude_str else []
@@ -982,7 +998,7 @@ roster_master = get_roster_master(roster_df)
 # ==========================================================
 # CACHED UPL PROCESSOR
 # ==========================================================
-@st.cache_data(show_spinner=False, ttl=600)
+@st.cache_data(show_spinner=False)
 def process_upl_files(dates_tuple, warehouse, exclude_str):
     start_d, end_d = dates_tuple
     exclude_list = [clean_id(x) for x in exclude_str.split(",") if str(x).strip()] if exclude_str else []
@@ -1049,14 +1065,7 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
 
             roster = rdf.iloc[6:].copy()
             roster.columns = [str(c).strip() for c in rdf.iloc[5].tolist()]
-
-            id_col = find_column(roster, ['psoft', 'p soft', 'employee id', 'emp id', 'staff id'])
-            if id_col is None:
-                raise KeyError(
-                    f"Could not find a Psoft/Employee ID column in Roster sheet. "
-                    f"Columns found: {list(roster.columns)}"
-                )
-            roster['_Clean_ID'] = roster[id_col].apply(clean_id)
+            roster['_Clean_ID'] = roster['Psoft No'].apply(clean_id)
 
             if 'Building' in roster.columns:
                 roster = roster[roster['Building'] == warehouse]
@@ -1065,7 +1074,7 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
             if 'Type' in roster.columns:
                 roster = roster[roster['Type'] == 'Direct']
             if '3P' in roster.columns:
-                roster['3P'] = normalize_agency(roster['3P'])
+                roster['3P'] = roster['3P'].replace('QuessCorp', 'Quesscorp')
 
             scheduled = roster[
                 (roster['Attendance'] != 'OFF')
@@ -1125,8 +1134,8 @@ def process_upl_files(dates_tuple, warehouse, exclude_str):
                 '_PLTrendNum': pl_trend,
             })
             upl_files_found.append((d, file_path))
-        except Exception as e:
-            upl_error_dates.append(f"{d.strftime('%d-%b-%y')} ({type(e).__name__}: {e})")
+        except Exception:
+            upl_error_dates.append(d.strftime('%d-%b-%y'))
 
     return (
         day_wise_data,
@@ -1291,13 +1300,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
             ) = process_upl_files(tuple(selected_dates_range), selected_warehouse, exclude_ids_input)
 
         if not upl_files_found:
-            if upl_error_dates:
-                st.error(
-                    "⚠️ UPL file(s) found for the selected date(s) but could not be parsed:\n\n"
-                    + "\n".join(f"- {e}" for e in upl_error_dates)
-                )
-            if upl_missing_dates:
-                st.warning(f"⚠️ No UPL file found in storage for: {', '.join(upl_missing_dates)}. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
+            st.warning("⚠️ No UPL files found for selected dates. Expected format: UPL-AUH1-DDMMYYYY.xlsx")
         else:
             if day_wise_data:
                 day_df = pd.DataFrame(day_wise_data)
@@ -1386,7 +1389,7 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
                 # ===== BOX 2: AGENCY WISE + BAR CHART =====
                 if all_roster_scheduled:
                     combined_roster = pd.concat(all_roster_scheduled, ignore_index=True)
-                    combined_roster['3P'] = normalize_agency(combined_roster['3P'])
+                    combined_roster['3P'] = combined_roster['3P'].replace('QuessCorp', 'Quesscorp')
 
                     agency_data = []
                     for agency in sorted(combined_roster['3P'].dropna().unique()):
@@ -1481,9 +1484,9 @@ if isinstance(selected_dates_range, tuple) and len(selected_dates_range) == 2:
 
                         gradient_colors = ['#b71c1c', '#e53935', '#f57c00', '#fdd835', '#81c784', '#2e7d32']
                         num_bars = len(chart_data)
-                        bar_colors = [gradient_colors[i % len(gradient_colors)] for i in range(num_bars)]
+                        bar_colors = gradient_colors[:num_bars] if num_bars <= len(gradient_colors) else gradient_colors
 
-                        chart_data['Color'] = bar_colors
+                        chart_data['Color'] = bar_colors[:num_bars]
                         agency_order = chart_data['Agency'].tolist()
 
                         bar_chart = alt.Chart(chart_data).mark_bar(
